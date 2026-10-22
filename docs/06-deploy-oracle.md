@@ -106,3 +106,13 @@ docker compose -f docker-compose.prod.yml ps                             # со�
 - [ ] Страница «Компания» принимает загрузку файла; файл переживает `docker compose … up -d --build`.
 - [ ] Резервная копия реально создалась и открывается.
 - [ ] Оферта и политика данных (в списке в [05-cabinets-and-auth.md](05-cabinets-and-auth.md)) — до приёма реальных документов.
+
+## 8. Как развёрнуто на самом деле (22.10.2026)
+
+- Франкфурт: свободных ARM-машин на 2 ядра / 12 ГБ не было ни в одной зоне, создана **1 OCPU / 6 ГБ** (AD-3).
+  Расширить можно позже в консоли Oracle (Compute → Instance → Edit shape).
+- Сеть создана мастером VCN (форма создания машины не давала включить публичный IP при новой сети).
+- Адрес без регистрации: `92-5-107-13.sslip.io` (sslip.io превращает IP в имя). Для настоящих клиентов нужен свой домен.
+- Код копируется на сервер `rsync` с компьютера, без git: `rsync -az -e "ssh -i ~/.ssh/qb_oracle" --exclude .git --exclude .env
+  --exclude node_modules --exclude dist ./ ubuntu@<IP>:qb/` и затем `up -d --build` на сервере.
+- Пока `MAIL_PROVIDER=console`, код входа пишется в лог: `docker compose -f docker-compose.prod.yml logs api | tail`.
