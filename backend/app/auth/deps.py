@@ -10,7 +10,16 @@ from sqlalchemy.orm import selectinload
 
 from app.auth.tokens import read_token
 from app.db import get_session
-from app.models import FileKind, FileStatus, Membership, OrgFile, OrgKind, User, VerificationStatus
+from app.models import (
+    FileKind,
+    FileStatus,
+    Membership,
+    Organization,
+    OrgFile,
+    OrgKind,
+    User,
+    VerificationStatus,
+)
 from app.platform.authz import Actor
 
 _bearer = HTTPBearer(auto_error=False)
@@ -74,7 +83,13 @@ async def current_actor(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "X-Org-Id header is required")
     org = membership.organization
     mode = x_mode or (OrgKind.buyer if org.is_buyer else OrgKind.seller)
-    ready = org.verification_status == VerificationStatus.verified or bool(
+    ready = await is_buyer_ready(session, org)
+    return Actor(user=user, org=org, membership=membership, mode=mode, buyer_ready=ready)
+
+
+async def is_buyer_ready(session: AsyncSession, org: Organization) -> bool:
+    """Buying opens once the company is verified or its registry extract is uploaded (and not rejected)."""
+    return org.verification_status == VerificationStatus.verified or bool(
         await session.scalar(
             select(OrgFile.id)
             .where(
@@ -85,7 +100,6 @@ async def current_actor(
             .limit(1)
         )
     )
-    return Actor(user=user, org=org, membership=membership, mode=mode, buyer_ready=ready)
 
 
 CurrentActor = Annotated[Actor, Depends(current_actor)]

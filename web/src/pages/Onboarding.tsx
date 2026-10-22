@@ -3,9 +3,9 @@ import { useState } from 'react'
 import { Field, SelectField } from '../components/Field'
 import { problemText, useLang, useT } from '../i18n'
 import { api, ApiError, type Lookup, type Mode, type NewOrg, type TaxRegime } from '../lib/api'
+import { DISTRICTS } from '../lib/districts'
 import { useSession } from '../lib/session'
 
-const DISTRICTS = ['Kentron', 'Arabkir', 'Ajapnyak', 'Davtashen', 'Nor Nork', 'Malatia-Sebastia', 'Shengavit', 'Erebuni']
 const VENUES = ['cafe', 'restaurant', 'bar', 'bakery', 'hotel', 'catering', 'other']
 const VENUE_LABEL: Record<string, Record<'hy' | 'ru' | 'en', string>> = {
   cafe: { hy: 'Սրճարան', ru: 'Кафе', en: 'Cafe' },

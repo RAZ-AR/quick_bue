@@ -4,6 +4,7 @@ A Google account whose verified e-mail matches an existing user signs into that 
 so it creates its own user unless linked from the profile (not built yet).
 """
 
+import dataclasses
 import hashlib
 import secrets
 from datetime import datetime, timedelta
@@ -78,7 +79,7 @@ async def finish_email_login(session: AsyncSession, raw_email: str, code: str, n
         row.consumed_at = now
         raise ValidationFailed([{"field": "code", "code": "code_expired"}])
     if not secrets.compare_digest(row.code_hash, _hash(email, code.strip())):
-        await session.commit()  # count the failed attempt
+        # The caller commits even on failure, so the attempt still counts
         raise ValidationFailed([{"field": "code", "code": "code_wrong"}])
     row.consumed_at = now
     return await login_or_register(
@@ -88,6 +89,9 @@ async def finish_email_login(session: AsyncSession, raw_email: str, code: str, n
 
 async def login_or_register(session: AsyncSession, ident: ExternalIdentity) -> User:
     """Find the user by this identity; else by the identity's verified e-mail; else create a new user."""
+    if ident.email:
+        # E-mail-code users are stored lower-case; a provider may keep the original case
+        ident = dataclasses.replace(ident, email=ident.email.strip().lower())
     row = await session.scalar(
         select(UserIdentity).where(
             UserIdentity.provider == ident.provider, UserIdentity.external_id == ident.external_id

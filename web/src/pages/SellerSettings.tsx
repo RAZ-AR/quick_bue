@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import { Field } from '../components/Field'
 import { problemText, useLang, useT } from '../i18n'
 import { api, ApiError, type SellerSettings as Settings } from '../lib/api'
+import { DISTRICTS } from '../lib/districts'
 
-const DISTRICTS = ['Kentron', 'Arabkir', 'Ajapnyak', 'Davtashen', 'Nor Nork', 'Malatia-Sebastia', 'Shengavit', 'Erebuni', 'Kanaker-Zeytun', 'Avan', 'Nubarashen', 'Nork-Marash']
 const DAYS: Record<'hy' | 'ru' | 'en', string[]> = {
   hy: ['Երկ', 'Երք', 'Չրք', 'Հնգ', 'Ուրբ', 'Շբթ', 'Կիր'],
   ru: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],

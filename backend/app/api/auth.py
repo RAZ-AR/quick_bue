@@ -1,16 +1,18 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.auth import service
-from app.auth.deps import CurrentUser, Session
+from app.auth.deps import CurrentUser, Session, is_buyer_ready
 from app.auth.google import GoogleIdTokenVerifier
 from app.auth.identity import AuthError
 from app.auth.telegram import verify_login_widget
 from app.auth.tokens import issue_token
 from app.config import get_settings
-from app.models import FileKind, FileStatus, OrgFile, User, VerificationStatus
+from app.models import User
+from app.platform import ratelimit
 from app.platform.clock import utcnow
+from app.platform.errors import ValidationFailed
 from app.schemas import DevLoginIn, MeOut, TokenOut
 
 router = APIRouter(tags=["auth"])
@@ -30,18 +32,8 @@ async def dev_login(body: DevLoginIn, session: Session) -> TokenOut:
 @router.get("/me", response_model=MeOut)
 async def me(user: CurrentUser, session: Session) -> MeOut:
     out = MeOut.model_validate(user)
-    for m in out.memberships:
-        m.buyer_ready = m.organization.verification_status == VerificationStatus.verified or bool(
-            await session.scalar(
-                select(OrgFile.id)
-                .where(
-                    OrgFile.organization_id == m.organization.id,
-                    OrgFile.kind == FileKind.state_registration,
-                    OrgFile.status != FileStatus.rejected,
-                )
-                .limit(1)
-            )
-        )
+    for m, membership in zip(out.memberships, user.memberships, strict=True):
+        m.buyer_ready = await is_buyer_ready(session, membership.organization)
     return out
 
 
@@ -62,8 +54,24 @@ class GoogleIn(BaseModel):
     credential: str  # ID token from Google Identity Services
 
 
+# Per client and for the whole site: every code is an e-mail sent from our account
+CODES_PER_IP_HOUR = 20
+CODES_PER_SITE_HOUR = 300
+
+
+def _client_ip(request: Request) -> str:
+    # Caddy and nginx append to X-Forwarded-For; the first entry is the browser
+    forwarded = request.headers.get("x-forwarded-for", "")
+    return forwarded.split(",")[0].strip() or (request.client.host if request.client else "?")
+
+
 @router.post("/auth/email/start")
-async def email_start(body: EmailStartIn, session: Session) -> dict:
+async def email_start(body: EmailStartIn, session: Session, request: Request) -> dict:
+    if not (
+        await ratelimit.hit(f"login-ip:{_client_ip(request)}", CODES_PER_IP_HOUR, 3600)
+        and await ratelimit.hit("login-site", CODES_PER_SITE_HOUR, 3600)
+    ):
+        raise service.TooManyRequests("too_many_codes", "try again later")
     code = await service.start_email_login(session, body.email, body.lang, utcnow())
     await session.commit()
     s = get_settings()
@@ -74,7 +82,11 @@ async def email_start(body: EmailStartIn, session: Session) -> dict:
 
 @router.post("/auth/email/verify", response_model=TokenOut)
 async def email_verify(body: EmailVerifyIn, session: Session) -> TokenOut:
-    user = await service.finish_email_login(session, body.email, body.code, utcnow())
+    try:
+        user = await service.finish_email_login(session, body.email, body.code, utcnow())
+    except ValidationFailed:
+        await session.commit()  # keep the counted attempt / the burnt code
+        raise
     await session.commit()
     return TokenOut(access_token=issue_token(user.id))
 

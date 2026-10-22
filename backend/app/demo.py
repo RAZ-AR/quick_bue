@@ -12,8 +12,11 @@ from sqlalchemy import func, select
 from app.auth.tokens import issue_token
 from app.db import get_sessionmaker
 from app.main import create_app
-from app.models import Order, User
+from app.models import Order, Organization, User
 from app.seed import seed
+
+# Cafe Arax, Bar Nova, Ararat Bakery from app.seed: only their orders count as demo orders
+DEMO_BUYER_TINS = ("00000011", "00000012", "00000021")
 
 
 async def _token(email: str) -> dict[str, str]:
@@ -24,7 +27,9 @@ async def _token(email: str) -> dict[str, str]:
 
 async def play() -> None:
     async with get_sessionmaker()() as s:
-        if await s.scalar(select(func.count()).select_from(Order)):
+        demo_buyers = select(Organization.id).where(Organization.tin.in_(DEMO_BUYER_TINS))
+        if await s.scalar(select(func.count()).select_from(Order).where(Order.buyer_id.in_(demo_buyers))):
+            # Partly created (a run failed midway)? Remove those orders by hand and run again.
             print("demo orders already present")
             return
 

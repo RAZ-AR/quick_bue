@@ -43,6 +43,9 @@ async def products(
             Product.archived_at.is_(None),
         )
     )
+    own = [m.organization_id for m in user.memberships] if user else []
+    if own:  # a company that also sells does not buy from itself
+        stmt = stmt.where(Product.seller_id.not_in(own))
     if category_id:
         stmt = stmt.where(Product.category_id == category_id)
     if seller_id and not guest:  # guests cannot browse a seller they cannot see

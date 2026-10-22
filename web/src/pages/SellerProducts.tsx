@@ -136,8 +136,13 @@ function ProductEditor({
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    setBusy(true)
     setErrors([])
+    // Every volume price needs both a quantity and a price; the server would only say "invalid"
+    if (f.tiers.some((x) => !Number(x.min_qty) || !x.price_amd)) {
+      setErrors([problemText('bad_tier', lang)])
+      return
+    }
+    setBusy(true)
     try {
       const body = { ...f, autopilot: f.allow_offers ? f.autopilot : null }
       if (product) await api.updateProduct(product.id, body)

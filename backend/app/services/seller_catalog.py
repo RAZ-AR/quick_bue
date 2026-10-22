@@ -79,8 +79,9 @@ def _validate(data: ProductIn) -> list[dict]:
         p.append({"field": "base_price_amd", "code": "bad_price"})
     if data.min_qty <= 0 or data.qty_step <= 0:
         p.append({"field": "min_qty", "code": "bad_qty"})
+    duplicate_qty = len({t.min_qty for t in data.tiers}) != len(data.tiers)
     for t in data.tiers:
-        if t.min_qty <= data.min_qty or not 0 < t.price_amd < data.base_price_amd:
+        if duplicate_qty or t.min_qty <= data.min_qty or not 0 < t.price_amd < data.base_price_amd:
             p.append({"field": "tiers", "code": "bad_tier"})
             break
     a = data.autopilot

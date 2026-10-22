@@ -18,6 +18,7 @@ from app.models import (
     TaxRegime,
     User,
     VenueType,
+    VerificationStatus,
 )
 from app.platform.authz import Action, Actor
 from app.platform.errors import Conflict, ValidationFailed
@@ -133,6 +134,9 @@ async def add_role(
     org = actor.org
     if role == OrgKind.seller and not org.is_seller:
         org.is_seller = True
+        # A buyer's check covered only the registry extract: selling needs the operator to look again
+        if org.verification_status == VerificationStatus.verified:
+            org.verification_status = VerificationStatus.pending
         if await session.get(SellerProfile, org.id) is None:
             session.add(SellerProfile(organization_id=org.id, cutoff_time=time(16, 0), lead_days=1))
     elif role == OrgKind.buyer and not org.is_buyer:

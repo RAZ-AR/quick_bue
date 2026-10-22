@@ -95,11 +95,20 @@ async def test_buyer_adds_seller_role_and_waits_for_verification(client, session
     arax = await login(client, "arax@qb.local")
     org = (await client.post("/organizations/me/roles", headers=arax, json={"role": "seller"})).json()
     assert (org["is_buyer"], org["is_seller"]) == (True, True)
+    # The buyer check covered only the registry extract: selling goes back to the operator
+    assert org["verification_status"] == "pending"
     me = (await client.get("/me", headers=arax)).json()
     assert me["memberships"][0]["organization"]["is_seller"] is True
-    # Selling mode works for listing, but the company sells only once verified (it already is, as a demo buyer)
     seller_mode = {**arax, "X-Mode": "seller"}
     assert (await client.get("/orders", headers=seller_mode)).json()["total"] == 0
+    r = await client.post(
+        "/seller/products",
+        headers=seller_mode,
+        json={"name": {"ru": "Пахлава"}, "unit": "kg", "base_price_amd": 5000},
+    )
+    assert r.status_code == 201, r.text  # the catalog can be prepared meanwhile
+    guest = (await client.get("/products", params={"q": "Пахлава"})).json()
+    assert guest["total"] == 0
 
 
 async def test_cannot_buy_own_products(client, sessionmaker):
@@ -108,9 +117,54 @@ async def test_cannot_buy_own_products(client, sessionmaker):
         "/organizations/me/roles", headers=lori, json={"role": "buyer", "delivery_address": "Stepanavan"}
     )
     buyer_mode = {**lori, "X-Mode": "buyer"}
-    cheese = await product_id(client, lori, "Lori cheese")
+    # Own products are not offered in the catalog ...
+    page = (await client.get("/products", headers=buyer_mode, params={"limit": 100})).json()
+    assert all(p["seller"]["display_name"] != "Լոռի Պանիր" for p in page["items"])
+    # ... and the cart refuses them anyway
+    async with sessionmaker() as s:
+        cheese = await s.scalar(select(Product.id).where(Product.name["en"].astext == "Lori cheese"))
     cart = await put(client, buyer_mode, cheese, 12)
     assert "own_products" in cart["groups"][0]["problems"]
+
+
+async def test_duplicate_tier_quantities_are_rejected(client):
+    lori = await login(client, "lori@qb.local")
+    r = await client.post(
+        "/seller/products",
+        headers=lori,
+        json={
+            "name": {"ru": "Сыр"},
+            "unit": "kg",
+            "base_price_amd": 3000,
+            "tiers": [{"min_qty": "10", "price_amd": 2900}, {"min_qty": "10", "price_amd": 2800}],
+        },
+    )
+    assert (r.status_code, r.json()["details"]["problems"][0]["code"]) == (422, "bad_tier")
+
+
+async def test_login_e_mails_limited_per_client(client, memory_ratelimit):
+    for i in range(20):
+        r = await client.post("/auth/email/start", json={"email": f"u{i}@example.am"})
+        assert r.status_code == 200, r.text
+    r = await client.post("/auth/email/start", json={"email": "u99@example.am"})
+    assert (r.status_code, r.json()["code"]) == (429, "too_many_codes")
+
+
+async def test_external_e_mail_matches_regardless_of_case(client, sessionmaker):
+    from app.auth import service
+    from app.auth.identity import ExternalIdentity
+    from app.models import AuthProvider
+
+    await client.post("/auth/email/start", json={"email": "anna@firm.am"})
+    async with sessionmaker() as s:
+        first = await service.login_or_register(
+            s, ExternalIdentity(provider=AuthProvider.email, external_id="anna@firm.am", email="anna@firm.am")
+        )
+        await s.commit()
+        again = await service.login_or_register(
+            s, ExternalIdentity(provider=AuthProvider.google, external_id="g-1", email="Anna@Firm.am")
+        )
+        assert again.id == first.id
 
 
 async def test_new_buyer_orders_only_after_uploading_extract(client):
@@ -172,7 +226,7 @@ async def test_seller_manages_products_and_terms(client):
         3950,
     )
     # Visible in the catalog and found by its Russian name in Latin letters
-    found = (await client.get("/products", headers=lori, params={"q": "motsarella"})).json()["items"]
+    found = (await client.get("/products", params={"q": "motsarella"})).json()["items"]
     assert [x["id"] for x in found] == [p["id"]]
 
     upd = {**PRODUCT, "base_price_amd": 4300, "tiers": [], "allow_offers": False}

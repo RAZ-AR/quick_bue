@@ -72,3 +72,18 @@ async def login(client: AsyncClient, email: str) -> dict[str, str]:
     r = await client.post("/auth/dev-login", json={"email": email})
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+@pytest.fixture(autouse=True)
+def memory_ratelimit(monkeypatch):
+    """Rate limits count in memory per test, so reruns within an hour do not trip the real Redis counters."""
+    from app.platform import ratelimit
+
+    counts: dict[str, int] = {}
+
+    async def hit(key: str, limit: int, window_s: int) -> bool:
+        counts[key] = counts.get(key, 0) + 1
+        return counts[key] <= limit
+
+    monkeypatch.setattr(ratelimit, "hit", hit)
+    return counts
