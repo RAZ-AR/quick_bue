@@ -1,0 +1,15 @@
+.DS_Store
+.env
+__pycache__/
+*.pyc
+.venv
+.venv.nosync/
+node_modules
+node_modules.nosync/
+dist/
+dev-dist/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+*.tsbuildinfo
+.claude/launch.json

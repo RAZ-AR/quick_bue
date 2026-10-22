@@ -1,0 +1,65 @@
+name: qb
+
+# Ports differ from Gumar (5433/6379/8000/8080) so both stacks run side by side.
+x-backend: &backend
+  build: ./backend
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+asyncpg://qb:${POSTGRES_PASSWORD:-qb}@db:5432/qb
+    REDIS_URL: redis://redis:6379/0
+  depends_on:
+    db: { condition: service_healthy }
+    redis: { condition: service_started }
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: qb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qb}
+      POSTGRES_DB: qb
+    ports: ["5435:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/initdb:/docker-entrypoint-initdb.d:ro  # creates qb_test for pytest
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qb"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6381:6379"]
+
+  # Runs migrations on start (see backend/Dockerfile)
+  api:
+    <<: *backend
+    ports: ["8010:8000"]
+
+  worker:
+    <<: *backend
+    command: ["sh", "-c", "rq worker --url $$REDIS_URL qb"]
+    depends_on: [api]
+    restart: unless-stopped
+
+  scheduler:
+    <<: *backend
+    command: ["python", "-m", "app.scheduler"]
+    depends_on: [api]
+    restart: unless-stopped
+
+  # Needs TELEGRAM_BOT_TOKEN: docker compose --profile bot up -d
+  bot:
+    <<: *backend
+    command: ["python", "-m", "app.bot"]
+    profiles: [bot]
+    depends_on: [api]
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    ports: ["8090:80"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
