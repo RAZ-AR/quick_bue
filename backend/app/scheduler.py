@@ -1,30 +1,66 @@
-"""Scheduler process: `python -m app.scheduler`. One tick per minute.
+"""Scheduler process: `python -m app.scheduler`. Every job finds what is due and calls a service.
 
-Planned jobs (docs/02-mvp.md §8): expire negotiations past expires_at, auto-accept deliveries after 48 h,
-remind about contract prices that end in 3 days. The tick is a no-op until those modules exist.
+Jobs are idempotent and each runs in its own transaction (docs/03-architecture.md §3.7).
 """
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
+from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db import get_sessionmaker
+from app.platform.clock import utcnow
+from app.services import agreements, negotiation, orders
+from app.workers.outbox import dispatch_pending
 
 log = logging.getLogger("qb.scheduler")
 
+Job = Callable[[AsyncSession, datetime], Awaitable[int]]
+
+EVERY_MINUTE: dict[str, Job] = {
+    "expire_negotiations": negotiation.expire_due,
+    "auto_accept_deliveries": orders.auto_accept_due,
+    "expire_agreements": agreements.expire_due,
+}
+
+
+async def run_job(name: str, job: Job, now: datetime | None = None) -> int:
+    async with get_sessionmaker()() as session:
+        try:
+            done = await job(session, now or utcnow())
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            log.exception("job %s failed", name)
+            return 0
+    if done:
+        log.info("%s: %d", name, done)
+    return done
+
 
 async def tick() -> None:
-    log.debug("tick")
+    for name, job in EVERY_MINUTE.items():
+        await run_job(name, job)
+
+
+async def outbox_tick() -> None:
+    await run_job("dispatch_outbox", dispatch_pending)
 
 
 async def main() -> None:
     scheduler = AsyncIOScheduler(timezone="UTC")
-    # max_instances=1 + coalesce: a slow tick never overlaps the next one
+    # max_instances=1 + coalesce: a slow run never overlaps the next one
     scheduler.add_job(tick, "cron", second=5, max_instances=1, coalesce=True)
+    scheduler.add_job(outbox_tick, "interval", seconds=2, max_instances=1, coalesce=True)
     scheduler.start()
-    log.info("scheduler started")
+    log.info("scheduler started: %s + dispatch_outbox", ", ".join(EVERY_MINUTE))
     await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)  # a line every 2 s otherwise
     asyncio.run(main())

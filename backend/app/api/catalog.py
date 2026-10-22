@@ -32,7 +32,7 @@ async def products(
     stmt = (
         select(Product, Organization)
         .join(Organization, Organization.id == Product.seller_id)
-        .where(Organization.status == OrgStatus.active)
+        .where(Organization.status == OrgStatus.active, Product.archived_at.is_(None))
     )
     if category_id:
         stmt = stmt.where(Product.category_id == category_id)

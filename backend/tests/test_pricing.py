@@ -1,7 +1,7 @@
 from decimal import Decimal as D
 
-from app.core.pricing import Tier, line_total_amd, resolve_unit_price
 from app.core.search import build_search_text, transliterate
+from app.domain.pricing import Tier, line_total_amd, resolve_unit_price
 from app.models import PriceSource
 
 TIERS = [Tier(D(10), 3400), Tier(D(20), 3350)]

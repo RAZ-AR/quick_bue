@@ -59,7 +59,9 @@ from app.models.platform import (
     Document,
     DocumentKind,
     DocumentStatus,
+    IdempotencyKey,
     Notification,
+    OutboxEvent,
     StatementStatus,
 )
 
@@ -83,6 +85,7 @@ __all__ = [
     "Document",
     "DocumentKind",
     "DocumentStatus",
+    "IdempotencyKey",
     "Invite",
     "LineDecision",
     "LinkStatus",
@@ -103,6 +106,7 @@ __all__ = [
     "OrderStatus",
     "OrgKind",
     "OrgStatus",
+    "OutboxEvent",
     "Organization",
     "PaymentStatus",
     "PriceAgreement",

@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from enum import StrEnum
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Amd, Base, I18nText, Timestamped, UUIDPk, str_enum
@@ -68,6 +68,8 @@ class Notification(UUIDPk, Timestamped, Base):
     channel: Mapped[Channel] = mapped_column(str_enum(Channel))
     type: Mapped[str] = mapped_column(String(48))
     payload: Mapped[dict | None] = mapped_column(I18nText)
+    # (event, recipient, channel): a retried job never sends the same message twice
+    dedupe_key: Mapped[str | None] = mapped_column(String(160), unique=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -95,3 +97,31 @@ class Document(UUIDPk, Timestamped, Base):
     status: Mapped[DocumentStatus] = mapped_column(str_enum(DocumentStatus), default=DocumentStatus.draft)
     payload: Mapped[dict | None] = mapped_column(I18nText)
     issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OutboxEvent(UUIDPk, Base):
+    """Side effects to run after commit (docs/03-architecture.md §3.6), written in the same transaction."""
+
+    __tablename__ = "outbox"
+
+    topic: Mapped[str] = mapped_column(String(48), index=True)  # e.g. order.placed, offer.received
+    payload: Mapped[dict] = mapped_column(I18nText)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+
+class IdempotencyKey(Base):
+    """Stored response of a non-repeatable request (checkout, offer answers), replayed on retry for 24 h."""
+
+    __tablename__ = "idempotency_keys"
+
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+    )
+    endpoint: Mapped[str] = mapped_column(String(80))
+    status_code: Mapped[int] = mapped_column(Integer)
+    response: Mapped[dict] = mapped_column(I18nText)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

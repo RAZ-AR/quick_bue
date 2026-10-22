@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from enum import StrEnum
 
 from sqlalchemy import (
@@ -92,12 +93,14 @@ class Product(UUIDPk, Timestamped, Base):
     base_price_amd: Mapped[int] = mapped_column(Amd)  # per unit
     vat_included: Mapped[bool] = mapped_column(Boolean, default=True)
     vat_rate_bp: Mapped[int] = mapped_column(Integer, default=2000)  # 20% VAT; 0 for turnover-tax sellers
-    min_qty: Mapped[float] = mapped_column(Qty, default=1)
-    qty_step: Mapped[float] = mapped_column(Qty, default=1)
+    min_qty: Mapped[Decimal] = mapped_column(Qty, default=1)
+    qty_step: Mapped[Decimal] = mapped_column(Qty, default=1)
     in_stock: Mapped[bool] = mapped_column(Boolean, default=True)
     allow_offers: Mapped[bool] = mapped_column(Boolean, default=False)
     images: Mapped[list[str]] = mapped_column(ARRAY(String(500)), default=list)
     search_text: Mapped[str] = mapped_column(Text, default="")
+    # Archived products disappear from the catalog but stay in order history
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     tiers: Mapped[list["PriceTier"]] = relationship(
         back_populates="product", order_by="PriceTier.min_qty", cascade="all, delete-orphan"
@@ -111,7 +114,7 @@ class PriceTier(UUIDPk, Timestamped, Base):
     __table_args__ = (UniqueConstraint("product_id", "min_qty"),)
 
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
-    min_qty: Mapped[float] = mapped_column(Qty)
+    min_qty: Mapped[Decimal] = mapped_column(Qty)
     price_amd: Mapped[int] = mapped_column(Amd)
 
     product: Mapped[Product] = relationship(back_populates="tiers")
@@ -138,7 +141,7 @@ class OfferRule(UUIDPk, Timestamped, Base):
     auto_accept_pct_bp: Mapped[int | None] = mapped_column(Integer)
     auto_counter: Mapped[bool] = mapped_column(Boolean, default=True)
     only_regulars: Mapped[bool] = mapped_column(Boolean, default=False)
-    min_qty: Mapped[float | None] = mapped_column(Qty)
+    min_qty: Mapped[Decimal | None] = mapped_column(Qty)
 
 
 class ClientLink(UUIDPk, Timestamped, Base):

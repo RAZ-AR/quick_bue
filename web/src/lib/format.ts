@@ -26,3 +26,27 @@ const UNITS: Record<Unit, Record<Lang, string>> = {
 export function unit(u: Unit, lang: Lang): string {
   return UNITS[u][lang]
 }
+
+const LOCALES: Record<Lang, string> = { hy: 'hy-AM', ru: 'ru-RU', en: 'en-GB' }
+
+/** "2026-10-23" -> "Fri, 23 Oct" in the user's language (Yerevan calendar day as sent by the API). */
+export function date(iso: string, lang: Lang): string {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(LOCALES[lang], {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  })
+}
+
+/** Timestamp in Yerevan time: "23 Oct, 14:05". */
+export function dateTime(iso: string, lang: Lang): string {
+  return new Date(iso).toLocaleString(LOCALES[lang], {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Yerevan',
+  })
+}

@@ -1,9 +1,24 @@
 import uuid
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models import Locale, OrgKind, Role, Unit
+from app.models import (
+    LineDecision,
+    Locale,
+    NegotiationScope,
+    NegotiationStatus,
+    OfferKind,
+    OfferResponse,
+    OrderStatus,
+    OrgKind,
+    PaymentStatus,
+    PriceSource,
+    Role,
+    Side,
+    Unit,
+)
 
 
 class ORM(BaseModel):
@@ -76,3 +91,216 @@ class ProductOut(ORM):
 class ProductPage(BaseModel):
     items: list[ProductOut]
     total: int
+
+
+# --- cart and checkout -------------------------------------------------------------------------------------
+
+
+class AddressOut(ORM):
+    id: uuid.UUID
+    label: str
+    text: str
+    district: str | None
+
+
+class CartItemIn(BaseModel):
+    qty: Decimal
+    offer_price_amd: int | None = None
+    note: str | None = None
+
+
+class CartLineOut(BaseModel):
+    product_id: uuid.UUID
+    name: dict[str, str]
+    unit: Unit
+    qty: Decimal
+    min_qty: Decimal
+    qty_step: Decimal
+    base_price_amd: int
+    unit_price_amd: int
+    price_source: PriceSource
+    line_total_amd: int
+    offer_price_amd: int | None
+    offers_allowed: bool
+    offer_min_line_amd: int
+    problems: list[str]
+
+
+class CartGroupOut(BaseModel):
+    seller: SellerBrief
+    lines: list[CartLineOut]
+    subtotal_amd: int
+    delivery_fee_amd: int
+    total_amd: int
+    min_order_amd: int
+    missing_amd: int
+    free_delivery_from_amd: int | None
+    delivery_date: date | None
+    problems: list[str]
+
+
+class CartOut(BaseModel):
+    groups: list[CartGroupOut]
+    total_amd: int
+    address: AddressOut | None
+    problems: list[dict]
+    can_negotiate: bool
+
+
+class OrderOfferIn(BaseModel):
+    seller_id: uuid.UUID
+    percent_bp: int
+
+
+class CheckoutIn(BaseModel):
+    address_id: uuid.UUID | None = None
+    order_offers: list[OrderOfferIn] = []
+    note: str | None = None
+
+
+# --- orders and negotiation ---------------------------------------------------------------------------------
+
+
+class OrderLineOut(ORM):
+    id: uuid.UUID
+    product_id: uuid.UUID | None
+    name_snapshot: dict[str, str]
+    unit: Unit
+    qty_ordered: Decimal
+    qty_confirmed: Decimal | None
+    qty_received: Decimal | None
+    list_price_amd: int
+    final_price_amd: int | None
+    price_source: PriceSource
+    line_total_amd: int | None
+
+
+class OfferLineOut(ORM):
+    order_line_id: uuid.UUID
+    proposed_price_amd: int
+    decision: LineDecision | None
+
+
+class OfferOut(ORM):
+    id: uuid.UUID
+    from_side: Side
+    is_auto: bool
+    kind: OfferKind
+    percent_bp: int | None
+    message: str | None
+    response: OfferResponse | None
+    created_at: datetime
+    lines: list[OfferLineOut]
+
+
+class NegotiationOut(BaseModel):
+    status: NegotiationStatus
+    scope: NegotiationScope
+    round: int
+    expires_at: datetime
+    my_turn: bool
+    rounds_left: int
+    offers: list[OfferOut]
+
+
+class EventOut(BaseModel):
+    type: str
+    at: datetime
+    auto: bool = False
+
+
+class OrderOut(BaseModel):
+    id: uuid.UUID
+    number: str
+    status: OrderStatus
+    my_side: str
+    buyer: SellerBrief
+    seller: SellerBrief
+    delivery_date: date | None
+    subtotal_amd: int
+    discount_amd: int
+    delivery_fee_amd: int
+    total_amd: int
+    payment_status: PaymentStatus
+    cancel_reason: str | None
+    buyer_note: str | None
+    seller_note: str | None
+    created_at: datetime
+    lines: list[OrderLineOut]
+    negotiation: NegotiationOut | None
+    allowed_actions: list[str]
+    address: AddressOut | None
+    # What this side should do next (answer_offer, confirm, deliver, accept_delivery, ...) and by when
+    next_step: str | None
+    deadline: datetime | None
+    saving_amd: int  # won in negotiation: lower line prices + order discount
+    events: list[EventOut]
+
+
+class OrderListItem(BaseModel):
+    id: uuid.UUID
+    number: str
+    status: OrderStatus
+    counterparty: SellerBrief
+    total_amd: int
+    delivery_date: date | None
+    created_at: datetime
+    lines_count: int
+    payment_status: PaymentStatus
+    my_side: str
+    next_step: str | None
+    deadline: datetime | None
+    saving_amd: int
+    preview: list[dict[str, str]]  # names of the first lines
+
+
+class OrderPage(BaseModel):
+    items: list[OrderListItem]
+    total: int
+
+
+class LineQtyIn(BaseModel):
+    order_line_id: uuid.UUID
+    qty: Decimal
+
+
+class ConfirmIn(BaseModel):
+    lines: list[LineQtyIn] = []
+    note: str | None = None
+
+
+class AcceptIn(BaseModel):
+    lines: list[LineQtyIn] = []
+
+
+class ReasonIn(BaseModel):
+    reason: str | None = None
+
+
+class LineAnswerIn(BaseModel):
+    order_line_id: uuid.UUID
+    decision: LineDecision
+    price_amd: int | None = None
+
+
+class OrderAnswerIn(BaseModel):
+    decision: LineDecision
+    percent_bp: int | None = None
+
+
+class RespondIn(BaseModel):
+    lines: list[LineAnswerIn] = []
+    order: OrderAnswerIn | None = None
+
+
+class AgreementIn(BaseModel):
+    order_line_id: uuid.UUID
+    days: int = 30
+
+
+class AgreementOut(ORM):
+    id: uuid.UUID
+    product_id: uuid.UUID
+    price_amd: int
+    valid_from: date
+    valid_until: date

@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from enum import StrEnum
 
 from sqlalchemy import (
@@ -76,8 +77,10 @@ class CartItem(UUIDPk, Timestamped, Base):
     )
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
-    qty: Mapped[float] = mapped_column(Qty)
+    qty: Mapped[Decimal] = mapped_column(Qty)
     note: Mapped[str | None] = mapped_column(Text)
+    # Buyer's proposed unit price; turns into a negotiation at checkout
+    offer_price_amd: Mapped[int | None] = mapped_column(Amd)
 
 
 class Checkout(UUIDPk, Timestamped, Base):
@@ -96,6 +99,8 @@ class Checkout(UUIDPk, Timestamped, Base):
 
 class Order(UUIDPk, Timestamped, Base):
     __tablename__ = "orders"
+    # Read the server-generated number back on INSERT (RETURNING), so it is known right after flush
+    __mapper_args__ = {"eager_defaults": True}
 
     # Human-readable, e.g. QB-26-000123
     number: Mapped[str] = mapped_column(
@@ -127,6 +132,8 @@ class Order(UUIDPk, Timestamped, Base):
     )
     buyer_note: Mapped[str | None] = mapped_column(Text)
     seller_note: Mapped[str | None] = mapped_column(Text)
+    # e.g. offer_expired, buyer, seller_rejected
+    cancel_reason: Mapped[str | None] = mapped_column(String(48))
     status_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     checkout: Mapped[Checkout | None] = relationship(back_populates="orders")
@@ -144,9 +151,10 @@ class OrderLine(UUIDPk, Timestamped, Base):
     product_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("products.id", ondelete="SET NULL"))
     name_snapshot: Mapped[dict] = mapped_column(I18nText)
     unit: Mapped[Unit] = mapped_column(str_enum(Unit))
-    qty_ordered: Mapped[float] = mapped_column(Qty)
-    qty_confirmed: Mapped[float | None] = mapped_column(Qty)
-    qty_received: Mapped[float | None] = mapped_column(Qty)
+    qty_ordered: Mapped[Decimal] = mapped_column(Qty)
+    qty_confirmed: Mapped[Decimal | None] = mapped_column(Qty)
+    qty_received: Mapped[Decimal | None] = mapped_column(Qty)
+    # Unit price before negotiation: catalog, tier or contract (see price_source). Declined offers keep it.
     list_price_amd: Mapped[int] = mapped_column(Amd)
     # Null while the line is under negotiation
     final_price_amd: Mapped[int | None] = mapped_column(Amd)
@@ -176,7 +184,7 @@ class Claim(UUIDPk, Timestamped, Base):
     order_line_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("order_lines.id", ondelete="CASCADE"))
     opened_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     type: Mapped[ClaimType] = mapped_column(str_enum(ClaimType))
-    qty: Mapped[float | None] = mapped_column(Qty)
+    qty: Mapped[Decimal | None] = mapped_column(Qty)
     photos: Mapped[list[str]] = mapped_column(ARRAY(String(500)), default=list)
     comment: Mapped[str | None] = mapped_column(Text)
     status: Mapped[ClaimStatus] = mapped_column(str_enum(ClaimStatus), default=ClaimStatus.open)
