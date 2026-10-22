@@ -1,0 +1,88 @@
+name: qb-prod
+
+# Production on one VM (docs/06-deploy-oracle.md): Caddy terminates HTTPS and is the only published service.
+# Run with:  docker compose -f docker-compose.prod.yml up -d --build
+x-backend: &backend
+  build: ./backend
+  env_file: .env
+  restart: unless-stopped
+  environment:
+    ENV: prod
+    DEV_LOGIN: "false"
+    DATABASE_URL: postgresql+asyncpg://qb:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/qb
+    REDIS_URL: redis://redis:6379/0
+    MEDIA_DIR: /app/media
+    WEB_APP_URL: https://${DOMAIN:?set DOMAIN in .env}
+  volumes:
+    - media:/app/media  # uploaded verification files
+  depends_on:
+    db: { condition: service_healthy }
+    redis: { condition: service_started }
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: qb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qb"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - redisdata:/data
+
+  # Runs migrations on start (see backend/Dockerfile)
+  api:
+    <<: *backend
+
+  worker:
+    <<: *backend
+    command: ["sh", "-c", "rq worker --url $$REDIS_URL qb"]
+    depends_on: [api]
+
+  scheduler:
+    <<: *backend
+    command: ["python", "-m", "app.scheduler"]
+    depends_on: [api]
+
+  # Needs TELEGRAM_BOT_TOKEN: docker compose -f docker-compose.prod.yml --profile bot up -d
+  bot:
+    <<: *backend
+    command: ["python", "-m", "app.bot"]
+    profiles: [bot]
+    depends_on: [api]
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    depends_on: [api]
+
+  # HTTPS with an automatic Let's Encrypt certificate for $DOMAIN
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+
+volumes:
+  pgdata:
+  redisdata:
+  media:
+  caddy_data:
+  caddy_config:

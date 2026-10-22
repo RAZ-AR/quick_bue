@@ -52,6 +52,12 @@ cd web && npm install && npm run dev   # http://localhost:5180, проксиру
 npm test && npm run lint && npx tsc -b
 ```
 
+## Прод
+
+`docker-compose.prod.yml` (Caddy + HTTPS, наружу только 80/443), `.env.prod.example`, `deploy/backup.sh`;
+первый запуск — `python -m app.bootstrap <email-оператора>` (категории + оператор, без демо-данных).
+Инструкция для Oracle Cloud Always Free — [docs/06-deploy-oracle.md](docs/06-deploy-oracle.md).
+
 ## Устройство бэкенда
 
 ```
