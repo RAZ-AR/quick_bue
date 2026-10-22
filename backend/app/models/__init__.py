@@ -14,9 +14,11 @@ from app.models.catalog import (
 )
 from app.models.identity import (
     Address,
+    AuthProvider,
     DeliveryZone,
     Invite,
     Locale,
+    LoginCode,
     Membership,
     Organization,
     OrgKind,
@@ -25,6 +27,7 @@ from app.models.identity import (
     SellerProfile,
     TaxRegime,
     User,
+    UserIdentity,
     VenueType,
     VerificationStatus,
 )
@@ -70,6 +73,9 @@ from app.models.verification import FileKind, FileStatus, OrgFile
 
 __all__ = [
     "Address",
+    "AuthProvider",
+    "LoginCode",
+    "UserIdentity",
     "AgreementStatus",
     "AuditLog",
     "Base",

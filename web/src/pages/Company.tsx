@@ -4,9 +4,11 @@ import { Field, SelectField } from '../components/Field'
 import { FILE_KINDS, FILE_STATUS, problemText, useLang, useT, VERIFICATION } from '../i18n'
 import { api, ApiError, openFile, type FileKind, type OrgDetail, type OrgFile, type TaxRegime, type Verification } from '../lib/api'
 import { date } from '../lib/format'
+import { useSession } from '../lib/session'
 
 /** The company profile: requisites printed on documents, and the verification checklist. */
-export function Company({ onChanged }: { onChanged: () => Promise<void> }) {
+export function Company() {
+  const { reload: onChanged } = useSession()
   const t = useT()
   const lang = useLang()
   const [v, setV] = useState<Verification | null>(null)
@@ -29,6 +31,7 @@ export function Company({ onChanged }: { onChanged: () => Promise<void> }) {
         </small>
       </h1>
       <VerificationBlock v={v} reload={load} onChanged={onChanged} />
+      <Roles org={org} onChanged={async () => (await load(), await onChanged())} />
       <Requisites org={org} onSaved={load} />
     </div>
   )
@@ -71,7 +74,7 @@ function VerificationBlock({ v, reload, onChanged }: { v: Verification; reload: 
         </header>
         {status === 'verified' && org.verified_at && <p style={{ margin: '10px 0 0' }}>✓ {date(org.verified_at, lang)}</p>}
         {org.review_note && <p style={{ margin: '10px 0 0' }}>💬 {org.review_note}</p>}
-        {org.kind === 'seller' && org.status === 'pending' && (
+        {org.is_seller && status !== 'verified' && (
           <p style={{ margin: '10px 0 0' }}>{status === 'pending' ? t('pending_seller_banner') : t('upload_to_sell')}</p>
         )}
       </section>
@@ -211,5 +214,60 @@ function Requisites({ org, onSaved }: { org: OrgDetail; onSaved: () => Promise<v
         {saved ? `✓ ${t('saved')}` : t('save')}
       </button>
     </form>
+  )
+}
+
+/** One company may buy and sell; selling opens after verification. */
+function Roles({ org, onChanged }: { org: OrgDetail; onChanged: () => Promise<void> }) {
+  const t = useT()
+  const lang = useLang()
+  const [address, setAddress] = useState('')
+  const [asking, setAsking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function add(role: 'buyer' | 'seller') {
+    setError(null)
+    try {
+      await api.addRole(role, role === 'buyer' ? address : undefined)
+      setAsking(false)
+      await onChanged()
+    } catch (e) {
+      const ex = e as ApiError
+      setError(problemText(ex.problems?.[0]?.code ?? ex.code, lang))
+    }
+  }
+
+  return (
+    <section className="ticket" style={{ display: 'grid', gap: 10 }}>
+      <header className="ticket-head">
+        <h2>{t('roles')}</h2>
+        <span style={{ display: 'flex', gap: 6 }}>
+          {org.is_buyer && <span className="pill brand">{t('mode_buy')}</span>}
+          {org.is_seller && <span className="pill brand">{t('mode_sell')}</span>}
+        </span>
+      </header>
+      {!org.is_seller && (
+        <button className="btn block" onClick={() => add('seller')}>
+          + {t('add_seller_role')}
+        </button>
+      )}
+      {!org.is_buyer &&
+        (asking ? (
+          <div className="dial-row">
+            <label className="field" style={{ flex: 1 }}>
+              <span>{t('delivery_address')}</span>
+              <input value={address} onChange={(e) => setAddress(e.target.value)} />
+            </label>
+            <button className="ibtn dark" style={{ alignSelf: 'end', marginBottom: 4 }} disabled={!address.trim()} onClick={() => add('buyer')}>
+              ✓
+            </button>
+          </div>
+        ) : (
+          <button className="btn block" onClick={() => setAsking(true)}>
+            + {t('add_buyer_role')}
+          </button>
+        ))}
+      {error && <p className="error small">{error}</p>}
+    </section>
   )
 }

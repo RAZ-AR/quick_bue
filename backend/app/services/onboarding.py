@@ -43,7 +43,7 @@ async def lookup(session: AsyncSession, raw_tin: str) -> LookupResult:
 
 @dataclass
 class NewOrganization:
-    kind: OrgKind
+    roles: list[OrgKind]
     tin: str
     legal_name: str
     display_name: str
@@ -68,7 +68,9 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
         problems.append({"field": "tin", "code": "bad_tin"})
     if not data.legal_name.strip():
         problems.append({"field": "legal_name", "code": "required"})
-    if data.kind == OrgKind.buyer and not (data.delivery_address or "").strip():
+    if not data.roles:
+        problems.append({"field": "roles", "code": "required"})
+    if OrgKind.buyer in data.roles and not (data.delivery_address or "").strip():
         problems.append({"field": "delivery_address", "code": "required"})
     if problems:
         raise ValidationFailed(problems)
@@ -84,7 +86,8 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
         raise ValidationFailed([{"field": "tin", "code": "company_inactive"}])
 
     org = Organization(
-        kind=data.kind,
+        is_buyer=OrgKind.buyer in data.roles,
+        is_seller=OrgKind.seller in data.roles,
         tin=tin,
         legal_name=data.legal_name.strip(),
         display_name=(data.display_name or data.legal_name).strip(),
@@ -96,17 +99,17 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
         bank_account=data.bank_account,
         phone=data.phone,
         email=data.email,
-        venue_type=data.venue_type if data.kind == OrgKind.buyer else None,
+        venue_type=data.venue_type if OrgKind.buyer in data.roles else None,
         # Sellers trade only after an operator checks their documents
-        status=OrgStatus.pending if data.kind == OrgKind.seller else OrgStatus.active,
+        status=OrgStatus.active,  # buying opens with the extract, selling after verification (authz)
         registry_source=source,
     )
     session.add(org)
     await session.flush()
     session.add(Membership(user_id=user.id, organization_id=org.id, role=Role.owner))
-    if data.kind == OrgKind.seller:
+    if org.is_seller:
         session.add(SellerProfile(organization_id=org.id, cutoff_time=time(16, 0), lead_days=1))
-    else:
+    if org.is_buyer:
         session.add(
             Address(
                 organization_id=org.id,
@@ -114,6 +117,30 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
                 text=data.delivery_address.strip(),
                 district=data.district,
             )
+        )
+    return org
+
+
+async def add_role(
+    session: AsyncSession,
+    actor: Actor,
+    role: OrgKind,
+    delivery_address: str | None = None,
+    district: str | None = None,
+) -> Organization:
+    """A buyer starts selling (or the other way round). Selling still waits for verification."""
+    actor.require(Action.org_staff)
+    org = actor.org
+    if role == OrgKind.seller and not org.is_seller:
+        org.is_seller = True
+        if await session.get(SellerProfile, org.id) is None:
+            session.add(SellerProfile(organization_id=org.id, cutoff_time=time(16, 0), lead_days=1))
+    elif role == OrgKind.buyer and not org.is_buyer:
+        if not (delivery_address or "").strip():
+            raise ValidationFailed([{"field": "delivery_address", "code": "required"}])
+        org.is_buyer = True
+        session.add(
+            Address(organization_id=org.id, label="Main", text=delivery_address.strip(), district=district)
         )
     return org
 

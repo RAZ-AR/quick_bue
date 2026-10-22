@@ -35,6 +35,24 @@ export const Icon = {
       <path d="M7.5 9h1M7.5 12.5h1M7.5 16h1M15.5 12.5h1M15.5 16h1" />
     </svg>
   ),
+  user: () => (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+    </svg>
+  ),
+  logout: () => (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10" />
+    </svg>
+  ),
+  truck: () => (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M3 6h11v10H3zM14 9h4l3 3v4h-7" />
+      <circle cx="7" cy="17.5" r="1.8" />
+      <circle cx="17" cy="17.5" r="1.8" />
+    </svg>
+  ),
   inbox: () => (
     <svg viewBox="0 0 24 24" {...stroke}>
       <path d="M4 13l2.5-8h11L20 13v6H4z" />

@@ -38,6 +38,7 @@ from app.models import (
     OrderEvent,
     OrderLine,
     OrderStatus,
+    OrgKind,
     PaymentStatus,
     Product,
     SellerProfile,
@@ -227,7 +228,9 @@ async def settle_commission(session: AsyncSession, order: Order, now: datetime) 
 def _require_side(actor: Actor, order: Order, by: By) -> None:
     if side_of(actor, order) != by:
         raise NotFound("order_not_found")
-    actor.require(Action.order_buyer if by == By.buyer else Action.order_seller)
+    # The order decides the side, not the app's current mode
+    mode = OrgKind.buyer if by == By.buyer else OrgKind.seller
+    actor.with_mode(mode).require(Action.order_buyer if by == By.buyer else Action.order_seller)
 
 
 async def confirm(

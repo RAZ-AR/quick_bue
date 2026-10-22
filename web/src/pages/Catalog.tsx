@@ -5,11 +5,13 @@ import { Tile } from '../components/ui'
 import { useLang, useT } from '../i18n'
 import { api, type Category, type OrderListItem, type Product, type ProductPage } from '../lib/api'
 import { useCart } from '../lib/cart'
+import { useSession } from '../lib/session'
 import { amd, date, qty, tr, unit } from '../lib/format'
 
 export function Catalog({ canBuy, firstName }: { canBuy: boolean; firstName?: string }) {
   const t = useT()
   const lang = useLang()
+  const { org, mode } = useSession()
   const [categories, setCategories] = useState<Category[]>([])
   const [q, setQ] = useState('')
   const [categoryId, setCategoryId] = useState<string | undefined>()
@@ -68,7 +70,7 @@ export function Catalog({ canBuy, firstName }: { canBuy: boolean; firstName?: st
         </div>
       </div>
 
-      {canBuy && browsing && <QuickReorder />}
+      {canBuy && browsing && org && mode === 'buyer' && <QuickReorder />}
 
       {error && <p className="error">{error}</p>}
       {page && <p className="muted count">{page.total ? `${t('found')}: ${page.total}` : t('nothing')}</p>}
@@ -150,7 +152,7 @@ function ProductCard({ p, slug, canBuy }: { p: Product; slug?: string; canBuy: b
       <Tile slug={slug} name={name} />
       <div>
         <h3>{name}</h3>
-        <p className="seller">{p.seller.display_name}</p>
+        <p className="seller">{p.seller ? p.seller.display_name : <span className="muted">🔒 {t('seller_hidden')}</span>}</p>
         <div className="price-row">
           <span className="price num">
             {amd(p.base_price_amd)}

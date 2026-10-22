@@ -13,6 +13,7 @@ from app.models import FileKind, Organization, User, VerificationStatus
 from app.platform import storage
 from app.platform.clock import utcnow
 from app.schemas import (
+    AddRoleIn,
     CompanyOut,
     DevRegisterIn,
     LookupOut,
@@ -77,6 +78,13 @@ async def create_organization(body: NewOrgIn, session: Session, user: CurrentUse
     return org
 
 
+@router.post("/organizations/me/roles", response_model=OrgDetailOut)
+async def add_role(body: AddRoleIn, session: Session, actor: CurrentActor) -> Organization:
+    org = await onboarding.add_role(session, actor, body.role, body.delivery_address, body.district)
+    await session.commit()
+    return org
+
+
 @router.get("/organizations/me", response_model=OrgDetailOut)
 async def my_organization(actor: CurrentActor) -> Organization:
     return actor.org
@@ -95,8 +103,8 @@ async def update_my_organization(body: RequisitesIn, session: Session, actor: Cu
 async def _verification_out(session: Session, org: Organization) -> VerificationOut:
     return VerificationOut(
         organization=OrgDetailOut.model_validate(org),
-        required=verification.REQUIRED[org.kind],
-        recommended=verification.RECOMMENDED[org.kind],
+        required=verification.required(org),
+        recommended=verification.recommended(org),
         files=[OrgFileOut.model_validate(f) for f in await verification.files_of(session, org.id)],
     )
 

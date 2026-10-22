@@ -26,6 +26,7 @@ from app.models import (
     Order,
     OrderStatus,
     Organization,
+    OrgKind,
     TaxRegime,
 )
 from app.platform.authz import Action, Actor
@@ -233,7 +234,7 @@ async def set_src_number(
     """The seller issued the e-invoice / e-waybill in the SRC system and records its number here."""
     if actor.org.id != order.seller_id:
         raise NotFound("order_not_found")
-    actor.require(Action.order_seller)
+    actor.with_mode(OrgKind.seller).require(Action.order_seller)
     if kind not in SRC_KINDS:
         raise ValidationFailed([{"code": "not_an_src_document"}])
     number = number.strip()

@@ -7,6 +7,7 @@
 - MVP — экраны, торг, модель данных, стек, план: [docs/02-mvp.md](docs/02-mvp.md)
 - Принципы, флоу и архитектура: [docs/03-architecture.md](docs/03-architecture.md)
 - Документы РА, регистрация по ИНН, верификация: [docs/04-documents-and-verification.md](docs/04-documents-and-verification.md)
+- Вход, гостевой режим, кабинеты, две роли: [docs/05-cabinets-and-auth.md](docs/05-cabinets-and-auth.md)
 - Как запускать и устроен код: [CLAUDE.md](CLAUDE.md)
 
 ## Быстрый старт
@@ -18,4 +19,5 @@ docker compose run --rm api python -m app.seed
 open http://localhost:8090
 ```
 
-Вход — кнопками демо-пользователей (работает, пока в `.env` стоит `DEV_LOGIN=true`).
+Каталог открыт без входа. Войти — кодом на почту (в разработке код показывается на экране) или кнопками
+демо-пользователей (работает, пока в `.env` стоит `DEV_LOGIN=true`). Google и Telegram включаются ключами в `.env`.

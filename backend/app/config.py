@@ -17,7 +17,16 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     jwt_ttl_days: int = 30
     telegram_bot_token: str = ""
-    telegram_bot_username: str = ""
+    telegram_bot_username: str = (
+        ""  # for the Login Widget; the site domain is set with /setdomain in @BotFather
+    )
+    telegram_auth_max_age_s: int = 86400
+    google_client_id: str = ""  # OAuth Web client ID (Google Cloud Console)
+    # E-mail login codes: "console" logs the code (development), "resend" sends through resend.com
+    mail_provider: Literal["console", "resend"] = "console"
+    resend_api_key: str = ""
+    mail_from: str = "QB <no-reply@example.com>"
+    login_code_ttl_minutes: int = 10
     # Passwordless sign-in as any seeded user, for local testing only. Never in prod.
     dev_login: bool = False
 

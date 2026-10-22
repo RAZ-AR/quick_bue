@@ -25,13 +25,32 @@ describe('format', () => {
 describe('App', () => {
   beforeEach(() => localStorage.clear())
 
-  it('shows demo sign-in when the backend allows it', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ dev_login: true, telegram_bot_username: '' }))),
-    )
+  // Answers by path, like the API: public config, an empty catalog
+  const fakeApi = vi.fn(async (url: string) => {
+    const body = url.includes('/config')
+      ? { dev_login: true, email_login: true, google_client_id: null, telegram_bot_username: null }
+      : url.includes('/categories')
+        ? []
+        : { items: [], total: 0, guest: true }
+    return new Response(JSON.stringify(body))
+  })
+
+  it('lets a guest browse the catalog without signing in', async () => {
+    vi.stubGlobal('fetch', fakeApi)
     render(
       <MemoryRouter initialEntries={['/']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect((await screen.findAllByText('Մուտք')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Cafe Arax — owner')).not.toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('shows demo sign-in when the backend allows it', async () => {
+    vi.stubGlobal('fetch', fakeApi)
+    render(
+      <MemoryRouter initialEntries={['/login']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <App />
       </MemoryRouter>,
     )

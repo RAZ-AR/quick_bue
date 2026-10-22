@@ -4,9 +4,10 @@ import { PriceDial } from '../components/PriceDial'
 import { QtyStepper } from '../components/QtyStepper'
 import { OrderMeter } from '../components/ui'
 import { problemText, SOURCES, useLang, useT } from '../i18n'
-import { api, ApiError, type Address, type CartGroup, type CartLine } from '../lib/api'
+import { api, ApiError, type Address, type CartGroup, type CartLine, type Product } from '../lib/api'
 import { useCart } from '../lib/cart'
 import { amd, date, tr, unit } from '../lib/format'
+import { useSession } from '../lib/session'
 
 const DISCOUNTS = [3, 5, 7, 10]
 
@@ -23,6 +24,101 @@ function potentialSaving(groups: CartGroup[], discounts: Record<string, number>)
 }
 
 export function CartPage() {
+  const { guest } = useCart()
+  return guest ? <GuestCart /> : <ServerCart />
+}
+
+/** Catalog price for a quantity: the deepest volume tier reached, else the list price. */
+function listPrice(p: Product, q: number): number {
+  let price = p.base_price_amd
+  for (const tier of p.tiers) if (q >= Number(tier.min_qty)) price = Math.min(price, tier.price_amd)
+  return price
+}
+
+/**
+ * Cart before the company exists: kept in the browser, priced from the public catalog.
+ * Sellers are hidden for guests, so lines are not grouped; ordering asks to sign in or register first.
+ */
+function GuestCart() {
+  const t = useT()
+  const lang = useLang()
+  const { me } = useSession()
+  const { local, setItem, remove } = useCart()
+  const [products, setProducts] = useState<Product[] | null>(null)
+  const ids = Object.keys(local)
+  const key = ids.sort().join(',')
+
+  useEffect(() => {
+    if (!key) return setProducts([])
+    api.products({ ids: key.split(','), limit: 100 }).then((r) => setProducts(r.items), () => setProducts([]))
+  }, [key])
+
+  if (!products) return <p className="muted">{t('loading')}</p>
+  const lines = products.filter((p) => local[p.id])
+  if (lines.length === 0) {
+    return (
+      <div className="empty page">
+        <div className="big">🧾</div>
+        <p>{t('cart_empty')}</p>
+        <Link className="btn primary" to="/">
+          {t('tab_catalog')}
+        </Link>
+      </div>
+    )
+  }
+  const total = lines.reduce((s, p) => s + Math.round(listPrice(p, Number(local[p.id])) * Number(local[p.id])), 0)
+
+  return (
+    <div className="stack page">
+      <h1 className="page-title">{t('tab_cart')}</h1>
+      <section className="ticket">
+        <ul className="lines">
+          {lines.map((p) => {
+            const q = local[p.id]
+            const price = listPrice(p, Number(q))
+            return (
+              <li key={p.id} className="line">
+                <div className="line-main">
+                  <div>
+                    <div className="line-name">{tr(p.name, lang)}</div>
+                    <div className="line-sub num">
+                      {price !== p.base_price_amd && <span className="strike">{amd(p.base_price_amd)}</span>} {amd(price)} /{' '}
+                      {unit(p.unit, lang)}
+                    </div>
+                  </div>
+                  <div className="line-total num">{amd(Math.round(price * Number(q)))}</div>
+                </div>
+                <div className="line-tools">
+                  <QtyStepper
+                    value={q}
+                    min={p.min_qty}
+                    step={p.qty_step}
+                    unitLabel={unit(p.unit, lang)}
+                    onChange={(next) => void (Number(next) <= 0 ? remove(p.id) : setItem(p.id, next))}
+                  />
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+      <section className="ticket checkout">
+        <div className="total-row">
+          <span>{t('total')}</span>
+          <strong className="num">≈ {amd(total)}</strong>
+        </div>
+        <p className="muted small" style={{ margin: 0 }}>
+          {t('guest_hint')}
+        </p>
+        <Link className="btn primary block" to={me ? '/onboarding' : '/login'}>
+          {me ? t('register_to_order') : t('sign_in_to_order')} →
+        </Link>
+      </section>
+    </div>
+  )
+}
+
+function ServerCart() {
   const t = useT()
   const lang = useLang()
   const navigate = useNavigate()

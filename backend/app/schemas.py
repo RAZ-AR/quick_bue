@@ -44,8 +44,9 @@ class DevLoginIn(BaseModel):
 
 class OrgOut(ORM):
     id: uuid.UUID
-    kind: OrgKind
     display_name: str
+    is_buyer: bool
+    is_seller: bool
     status: OrgStatus
     verification_status: VerificationStatus
 
@@ -53,6 +54,7 @@ class OrgOut(ORM):
 class MembershipOut(ORM):
     role: Role
     organization: OrgOut
+    buyer_ready: bool = False  # registry extract uploaded or verified: buying is open
 
 
 class MeOut(ORM):
@@ -83,7 +85,7 @@ class SellerBrief(BaseModel):
 
 class ProductOut(ORM):
     id: uuid.UUID
-    seller: SellerBrief
+    seller: SellerBrief | None  # hidden from guests
     category_id: uuid.UUID | None
     name: dict[str, str]
     unit: Unit
@@ -101,6 +103,7 @@ class ProductOut(ORM):
 class ProductPage(BaseModel):
     items: list[ProductOut]
     total: int
+    guest: bool = False
 
 
 # --- cart and checkout -------------------------------------------------------------------------------------
@@ -343,7 +346,7 @@ class LookupOut(BaseModel):
 
 
 class NewOrgIn(BaseModel):
-    kind: OrgKind
+    roles: list[OrgKind]
     tin: str
     legal_name: str
     display_name: str = ""
@@ -360,9 +363,16 @@ class NewOrgIn(BaseModel):
     district: str | None = None
 
 
+class AddRoleIn(BaseModel):
+    role: OrgKind
+    delivery_address: str | None = None
+    district: str | None = None
+
+
 class OrgDetailOut(ORM):
     id: uuid.UUID
-    kind: OrgKind
+    is_buyer: bool
+    is_seller: bool
     status: OrgStatus
     legal_name: str
     display_name: str

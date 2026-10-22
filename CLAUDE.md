@@ -5,7 +5,8 @@
 в системе КГД. Продукт и рынок — [docs/01-research-and-concept.md](docs/01-research-and-concept.md),
 экраны, торг, модель данных и план — [docs/02-mvp.md](docs/02-mvp.md),
 принципы, флоу, модули и правила слоёв — [docs/03-architecture.md](docs/03-architecture.md),
-документы по законодательству РА, регистрация по ИНН и верификация — [docs/04-documents-and-verification.md](docs/04-documents-and-verification.md).
+документы по законодательству РА, регистрация по ИНН и верификация — [docs/04-documents-and-verification.md](docs/04-documents-and-verification.md),
+вход, гостевой режим, кабинеты и две роли — [docs/05-cabinets-and-auth.md](docs/05-cabinets-and-auth.md).
 
 Языки интерфейса и каталога: армянский (`hy`), русский (`ru`), английский (`en`). Валюта — AMD, целые драмы.
 Пользователю всё пишем по-русски; код, комментарии и коммиты — по-английски.
@@ -59,11 +60,13 @@ backend/app/
 ├── domain/        # чистые функции: pricing, orders (статусы, суммы, дата доставки), negotiation (правила,
 │                  # автопилот), commission — без базы и HTTP; из app.models берут только enum
 ├── services/      # работа с базой: cart, checkout, orders, negotiation, agreements, prices, documents,
-│                  # onboarding (регистрация по ИНН), verification (файлы и модерация) — без commit
-├── integrations/  # порты внешних систем: registry (demo | none — открытого API реестра РА нет)
+│                  # onboarding (регистрация по ИНН, роли), verification (файлы и модерация),
+│                  # seller_catalog (свои товары и условия доставки) — без commit
+├── integrations/  # порты внешних систем: registry (demo | none — открытого API реестра РА нет),
+│                  # mailer (console | resend) для кодов входа
 ├── platform/      # authz (Actor + таблица прав), errors, clock, outbox, idempotency, storage (файлы в MEDIA_DIR)
-├── api/           # auth, catalog, cart (+ /checkout), orders (+ торг, /agreements); commit здесь
-├── auth/          # JWT, current_user, current_actor (заголовок X-Org-Id)
+├── api/           # auth, catalog (публичный), cart (+ /checkout), orders (+ торг, /agreements), seller; commit здесь
+├── auth/          # JWT, вход по коду на почту / Google / Telegram, current_actor (заголовки X-Org-Id, X-Mode)
 ├── core/          # search (search_text + транслит hy/ru → latin)
 ├── workers/       # outbox-диспетчер (пока только лог), очередь RQ "qb"
 ├── bot/           # Telegram-бот (пока только /start)
@@ -92,6 +95,9 @@ backend/app/
   замороженный снимок. Официальные e-документы КГД — только номера, вводит продавец.
 - **Новые enum-значения** в существующей колонке: автогенерация не меняет CHECK — пересоздайте ограничение вручную
   через `op.f('ck_<table>_<enum>')` (пример — миграция `0003`).
+- **Доступ** (docs/05): каталог публичный, гость не видит продавца. Компания может быть и покупателем, и продавцом
+  (`is_buyer`, `is_seller`); сторона запроса — режим `X-Mode`. Покупать — после загрузки выписки из госреестра,
+  продавать (принимать заказы) — после проверки оператором. Права — `platform/authz.py`, `Actor.require()`.
 - **Уведомлений пока нет** (канал не выбран): события копятся в `outbox`, экраны продавца обновляются опросом.
 - Поиск: `products.search_text` собирается `core/search.build_search_text` из всех языков + транслитерации;
   обновляйте его при каждом изменении названия.

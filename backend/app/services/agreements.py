@@ -7,7 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.orders import By
-from app.models import AgreementStatus, ClientLink, OrderLine, PriceAgreement, PriceSource
+from app.models import AgreementStatus, ClientLink, OrderLine, OrgKind, PriceAgreement, PriceSource
 from app.platform.authz import Action, Actor
 from app.platform.clock import local
 from app.platform.errors import Conflict, NotFound, ValidationFailed
@@ -18,6 +18,7 @@ from app.services import orders as order_svc
 async def create_from_line(
     session: AsyncSession, actor: Actor, order_line_id: uuid.UUID, days: int, now: datetime
 ) -> PriceAgreement:
+    actor = actor.with_mode(OrgKind.seller)
     actor.require(Action.agreement_create)
     if not 1 <= days <= 365:
         raise ValidationFailed([{"code": "bad_days"}])

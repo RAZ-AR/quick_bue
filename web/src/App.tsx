@@ -2,19 +2,22 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from './components/ui'
-import { LangContext, useT } from './i18n'
-import { api, token, type Lang, type Me } from './lib/api'
-import { CartProvider, useCart, useCartMaybe } from './lib/cart'
+import { LangContext, useT, type TextKey } from './i18n'
+import type { Lang, Mode } from './lib/api'
+import { CartProvider, useCart } from './lib/cart'
 import { amd } from './lib/format'
+import { SessionProvider, useSession } from './lib/session'
 import { CartPage } from './pages/Cart'
 import { Catalog } from './pages/Catalog'
 import { Company } from './pages/Company'
+import { Login } from './pages/Login'
 import { Moderation } from './pages/Moderation'
 import { Onboarding } from './pages/Onboarding'
-import { PrintDocument } from './pages/PrintDocument'
-import { Login } from './pages/Login'
 import { OrderDetail } from './pages/OrderDetail'
 import { Orders } from './pages/Orders'
+import { PrintDocument } from './pages/PrintDocument'
+import { SellerProducts } from './pages/SellerProducts'
+import { SellerSettings } from './pages/SellerSettings'
 
 const LANG_KEY = 'qb.lang'
 const LANGS: Lang[] = ['hy', 'ru', 'en']
@@ -30,9 +33,6 @@ function savedLang(): Lang {
 
 export function App() {
   const [lang, setLangState] = useState<Lang>(savedLang)
-  const [me, setMe] = useState<Me | null>(null)
-  const [checked, setChecked] = useState(false)
-
   const setLang = useCallback((l: Lang) => {
     setLangState(l)
     try {
@@ -41,174 +41,350 @@ export function App() {
       /* private mode: language just isn't remembered */
     }
   }, [])
-
-  const loadMe = useCallback(async () => {
-    if (!token.get()) {
-      setMe(null)
-      setChecked(true)
-      return
-    }
-    try {
-      setMe(await api.me())
-    } catch {
-      setMe(null)
-    } finally {
-      setChecked(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadMe()
-  }, [loadMe])
-
   useEffect(() => {
     document.documentElement.lang = lang
   }, [lang])
-
   const ctx = useMemo(() => ({ lang, setLang }), [lang, setLang])
-  const signOut = useCallback(() => {
-    token.clear()
-    setMe(null)
-  }, [])
-
-  if (!checked) return null
 
   return (
     <LangContext.Provider value={ctx}>
-      {me ? (
+      <SessionProvider>
         <Routes>
           {/* A4 printout: no app chrome */}
           <Route path="/print/:id" element={<PrintDocument />} />
-          <Route
-            path="*"
-            element={
-              me.memberships.length === 0 && me.is_platform_admin ? (
-                <AdminShell me={me} onSignOut={signOut} />
-              ) : me.memberships.length === 0 ? (
-                <Onboarding me={me} onDone={loadMe} onSignOut={signOut} />
-              ) : (
-                <Shell me={me} onSignOut={signOut} onOrgChanged={loadMe} />
-              )
-            }
-          />
+          <Route path="*" element={<Shell />} />
         </Routes>
-      ) : (
-        <Routes>
-          <Route path="*" element={<Login onSignedIn={loadMe} />} />
-        </Routes>
-      )}
+      </SessionProvider>
     </LangContext.Provider>
   )
 }
 
-function TopBar({ title, sub, onSignOut }: { title: string; sub: string; onSignOut: () => void }) {
-  const t = useT()
-  const navigate = useNavigate()
-  return (
-    <header className="topbar">
-      <div className="brand">QB</div>
-      <div className="who">
-        <span>{title}</span>
-        <small>{sub}</small>
-      </div>
-      <LangSwitch />
-      <button
-        className="link"
-        onClick={() => {
-          onSignOut()
-          navigate('/')
-        }}
-      >
-        {t('logout')}
-      </button>
-    </header>
-  )
+type State = 'guest' | 'no_company' | 'admin' | 'buyer' | 'seller'
+
+interface NavItem {
+  to: string
+  label: TextKey
+  icon: () => React.ReactNode
+  badge?: number
 }
 
-/** Platform operator: only the verification queue for now. */
-function AdminShell({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
-  const t = useT()
-  return (
-    <div className="app">
-      <TopBar title={t('tab_moderation')} sub={me.name} onSignOut={onSignOut} />
-      <main>
-        <Moderation />
-      </main>
-    </div>
-  )
+function useAppState(): State {
+  const { me, org, mode } = useSession()
+  if (!me) return 'guest'
+  if (!org) return me.is_platform_admin ? 'admin' : 'no_company'
+  return mode
 }
 
-function Shell({ me, onSignOut, onOrgChanged }: { me: Me; onSignOut: () => void; onOrgChanged: () => Promise<void> }) {
-  const t = useT()
-  const membership = me.memberships[0]
-  const org = membership?.organization
-  const isBuyer = org?.kind === 'buyer'
-  const { pathname } = useLocation()
-  const pendingSeller = org?.kind === 'seller' && org.status === 'pending' && pathname !== '/company'
-  const awaitingReview = org?.verification_status === 'pending'
+function Shell() {
+  const state = useAppState()
+  const server = state === 'buyer'
   return (
-    <CartProvider enabled={isBuyer}>
-      <Frame isBuyer={isBuyer}>
-        <TopBar title={org?.display_name ?? me.name} sub={me.name} onSignOut={onSignOut} />
-        <main>
-          {pendingSeller && (
-            <Link to="/company" className="next" style={{ marginBottom: 12, textDecoration: 'none' }}>
-              <strong>{awaitingReview ? t('pending_seller_banner') : t('upload_to_sell')}</strong>
-              <span className="clock">→</span>
-            </Link>
-          )}
-          <Routes>
-            <Route path="/company" element={<Company onChanged={onOrgChanged} />} />
-            {isBuyer ? (
-              <>
-                <Route path="/" element={<Catalog canBuy firstName={me.name.split(' ')[0]} />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/orders" element={<Orders />} />
-              </>
-            ) : (
-              <>
-                <Route path="/" element={<Orders inbox />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/catalog" element={<Catalog canBuy={false} />} />
-              </>
-            )}
-            <Route path="/orders/:id" element={<OrderDetail />} />
-            <Route path="/login" element={<Navigate to="/" replace />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-        <TabBar isBuyer={isBuyer} />
-      </Frame>
+    <CartProvider server={server}>
+      <Layout state={state} />
     </CartProvider>
   )
 }
 
-/** Page frame; on the buyer's catalog a cart bar floats above the tabs while the cart has something in it. */
-function Frame({ isBuyer, children }: { isBuyer: boolean; children: React.ReactNode }) {
-  const cart = useCartMaybe()
+function Layout({ state }: { state: State }) {
+  const t = useT()
   const { pathname } = useLocation()
-  const showBar = isBuyer && pathname === '/' && (cart?.count ?? 0) > 0
+  const { count } = useCart()
+  const nav = navFor(state, count)
+  const showCartBar = (state === 'buyer' || state === 'guest' || state === 'no_company') && pathname === '/' && count > 0
+
   return (
-    <div className={`app ${isBuyer ? 'buyer' : 'seller'}${showBar ? ' has-cartbar' : ''}`}>
-      {children}
-      {showBar && <CartBar />}
+    <div className={`layout${showCartBar ? ' has-cartbar' : ''}`}>
+      <Sidebar nav={nav} state={state} />
+      <div className="content">
+        <MobileTopBar state={state} />
+        <main>
+          <Banner state={state} />
+          <Routes>{routesFor(state)}</Routes>
+        </main>
+      </div>
+      <nav className="tabbar" aria-label="menu">
+        {nav.map((n) => (
+          <Tab key={n.to} {...n} label={t(n.label)} />
+        ))}
+      </nav>
+      {showCartBar && <CartBar />}
     </div>
+  )
+}
+
+function navFor(state: State, cartCount: number): NavItem[] {
+  switch (state) {
+    case 'guest':
+      return [
+        { to: '/', label: 'tab_catalog', icon: Icon.catalog },
+        { to: '/cart', label: 'tab_cart', icon: Icon.cart, badge: cartCount },
+        { to: '/login', label: 'sign_in', icon: Icon.user },
+      ]
+    case 'no_company':
+      return [
+        { to: '/', label: 'tab_catalog', icon: Icon.catalog },
+        { to: '/cart', label: 'tab_cart', icon: Icon.cart, badge: cartCount },
+        { to: '/onboarding', label: 'tab_company', icon: Icon.company },
+      ]
+    case 'admin':
+      return [{ to: '/', label: 'tab_moderation', icon: Icon.inbox }]
+    case 'buyer':
+      return [
+        { to: '/', label: 'tab_catalog', icon: Icon.catalog },
+        { to: '/cart', label: 'tab_cart', icon: Icon.cart, badge: cartCount },
+        { to: '/orders', label: 'tab_orders', icon: Icon.ticket },
+        { to: '/company', label: 'tab_company', icon: Icon.company },
+      ]
+    case 'seller':
+      return [
+        { to: '/', label: 'tab_inbox', icon: Icon.inbox },
+        { to: '/orders', label: 'tab_orders', icon: Icon.ticket },
+        { to: '/seller/products', label: 'tab_products', icon: Icon.catalog },
+        { to: '/seller/settings', label: 'tab_delivery', icon: Icon.truck },
+        { to: '/company', label: 'tab_company', icon: Icon.company },
+      ]
+  }
+}
+
+function routesFor(state: State) {
+  switch (state) {
+    case 'guest':
+      return (
+        <>
+          <Route path="/" element={<Catalog canBuy />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      )
+    case 'no_company':
+      return (
+        <>
+          <Route path="/" element={<Catalog canBuy />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      )
+    case 'admin':
+      return (
+        <>
+          <Route path="/" element={<Moderation />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      )
+    case 'buyer':
+      return (
+        <>
+          <Route path="/" element={<Catalog canBuy />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/company" element={<Company />} />
+          {/* Just registered: go on to the documents */}
+          <Route path="/onboarding" element={<Navigate to="/company" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      )
+    case 'seller':
+      return (
+        <>
+          <Route path="/" element={<Orders inbox />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/seller/products" element={<SellerProducts />} />
+          <Route path="/seller/settings" element={<SellerSettings />} />
+          <Route path="/company" element={<Company />} />
+          {/* Just registered: go on to the documents */}
+          <Route path="/onboarding" element={<Navigate to="/company" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      )
+  }
+}
+
+/** What blocks the current side, said once at the top of every page. */
+function Banner({ state }: { state: State }) {
+  const t = useT()
+  const { org, buyerReady, canSell } = useSession()
+  const { pathname } = useLocation()
+  if (pathname === '/company' || pathname === '/onboarding') return null
+  let text: TextKey | null = null
+  let to = '/company'
+  if (state === 'no_company') {
+    text = 'register_company_cta'
+    to = '/onboarding'
+  } else if (state === 'buyer' && !buyerReady) text = 'upload_to_buy'
+  else if (state === 'seller' && !canSell)
+    text = org?.verification_status === 'pending' ? 'pending_seller_banner' : 'upload_to_sell'
+  if (!text) return null
+  return (
+    <Link to={to} className="next banner">
+      <strong>{t(text)}</strong>
+      <span className="clock">→</span>
+    </Link>
+  )
+}
+
+function ModeSwitch({ compact = false }: { compact?: boolean }) {
+  const t = useT()
+  const navigate = useNavigate()
+  const { org, mode, setMode } = useSession()
+  if (!org || !(org.is_buyer && org.is_seller)) return null
+  const pick = (m: Mode) => {
+    setMode(m)
+    navigate('/')
+  }
+  return (
+    <div className={compact ? 'mode-switch compact' : 'mode-switch'} role="group" aria-label={t('mode')}>
+      <button className={mode === 'buyer' ? 'on' : ''} onClick={() => pick('buyer')} aria-pressed={mode === 'buyer'}>
+        {t('mode_buy')}
+      </button>
+      <button className={mode === 'seller' ? 'on' : ''} onClick={() => pick('seller')} aria-pressed={mode === 'seller'}>
+        {t('mode_sell')}
+      </button>
+    </div>
+  )
+}
+
+function Who() {
+  const t = useT()
+  const { me, org } = useSession()
+  if (!me) return <span className="muted small">{t('guest')}</span>
+  return (
+    <div className="who">
+      <span>{org?.display_name ?? (me.is_platform_admin ? t('tab_moderation') : me.name)}</span>
+      <small>{me.name}</small>
+    </div>
+  )
+}
+
+function SignOutButton() {
+  const t = useT()
+  const navigate = useNavigate()
+  const { me, signOut } = useSession()
+  if (!me) {
+    return (
+      <Link className="btn primary small-btn" to="/login">
+        {t('sign_in')}
+      </Link>
+    )
+  }
+  return (
+    <button
+      className="link"
+      onClick={() => {
+        signOut()
+        navigate('/')
+      }}
+    >
+      {t('logout')}
+    </button>
+  )
+}
+
+function Sidebar({ nav, state }: { nav: NavItem[]; state: State }) {
+  const t = useT()
+  return (
+    <aside className="sidebar">
+      <Link to="/" className="side-brand">
+        <span className="brand">QB</span>
+        <span>
+          <b>QB</b>
+          <small>HoReCa</small>
+        </span>
+      </Link>
+      <ModeSwitch />
+      <nav className="side-nav">
+        {nav.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.to === '/'}>
+            {n.icon()}
+            <span>{t(n.label)}</span>
+            {n.badge ? <span className="dot">{n.badge}</span> : null}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="side-foot">
+        <Who />
+        <div className="side-row">
+          <LangSwitch />
+          <SignOutButton />
+        </div>
+        {state === 'guest' && <p className="muted small">{t('guest_hint')}</p>}
+      </div>
+    </aside>
+  )
+}
+
+function MobileTopBar({ state }: { state: State }) {
+  const t = useT()
+  const navigate = useNavigate()
+  const { me, org, signOut } = useSession()
+  const dual = !!org && org.is_buyer && org.is_seller
+  return (
+    <header className="topbar">
+      <Link to="/" className="brand" aria-label="QB">
+        QB
+      </Link>
+      {dual ? <ModeSwitch compact /> : state === 'guest' ? <span className="who" /> : <Who />}
+      <span className="spacer" />
+      <LangCycle />
+      {me ? (
+        <button
+          className="ibtn"
+          aria-label={t('logout')}
+          title={t('logout')}
+          onClick={() => {
+            signOut()
+            navigate('/')
+          }}
+        >
+          {Icon.logout()}
+        </button>
+      ) : (
+        <Link className="btn primary small-btn" to="/login">
+          {t('sign_in')}
+        </Link>
+      )}
+    </header>
+  )
+}
+
+/** Phone header: one round button that steps through hy → ru → en. */
+function LangCycle() {
+  return (
+    <LangContext.Consumer>
+      {({ lang, setLang }) => (
+        <button
+          className="ibtn lang-cycle"
+          aria-label="Language"
+          onClick={() => setLang(LANGS[(LANGS.indexOf(lang) + 1) % LANGS.length])}
+        >
+          {lang === 'hy' ? 'Հայ' : lang === 'ru' ? 'Рус' : 'Eng'}
+        </button>
+      )}
+    </LangContext.Consumer>
   )
 }
 
 function CartBar() {
   const t = useT()
-  const { cart, count } = useCart()
-  if (!cart) return null
-  const suppliers = cart.groups.length
+  const { cart, count, guest } = useCart()
+  const { me } = useSession()
   return (
     <Link to="/cart" className="cartbar">
       <div className="info">
-        <span key={cart.total_amd} className="sum num bump">
-          {amd(cart.total_amd)}
-        </span>
+        {cart ? (
+          <span key={cart.total_amd} className="sum num bump">
+            {amd(cart.total_amd)}
+          </span>
+        ) : (
+          <span className="sum">{t('tab_cart')}</span>
+        )}
         <small>
-          {count} {t('items')} · {suppliers} {t('suppliers')}
+          {count} {t('items')}
+          {cart && ` · ${cart.groups.length} ${t('suppliers')}`}
+          {guest && ` · ${t(me ? 'company_cart_hint' : 'guest_cart_hint')}`}
         </small>
       </div>
       <span className="go">{t('go_cart')} →</span>
@@ -225,34 +401,6 @@ function Tab({ to, icon, label, badge }: { to: string; icon: () => React.ReactNo
       </span>
       <span className="tab-label">{label}</span>
     </NavLink>
-  )
-}
-
-function TabBar({ isBuyer }: { isBuyer: boolean }) {
-  const t = useT()
-  if (!isBuyer) {
-    return (
-      <nav className="tabbar">
-        <Tab to="/" icon={Icon.inbox} label={t('tab_inbox')} />
-        <Tab to="/orders" icon={Icon.ticket} label={t('tab_orders')} />
-        <Tab to="/catalog" icon={Icon.catalog} label={t('tab_catalog')} />
-        <Tab to="/company" icon={Icon.company} label={t('tab_company')} />
-      </nav>
-    )
-  }
-  return <BuyerTabs />
-}
-
-function BuyerTabs() {
-  const t = useT()
-  const { count } = useCart()
-  return (
-    <nav className="tabbar">
-      <Tab to="/" icon={Icon.catalog} label={t('tab_catalog')} />
-      <Tab to="/cart" icon={Icon.cart} label={t('tab_cart')} badge={count} />
-      <Tab to="/orders" icon={Icon.ticket} label={t('tab_orders')} />
-      <Tab to="/company" icon={Icon.company} label={t('tab_company')} />
-    </nav>
   )
 }
 

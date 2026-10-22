@@ -11,24 +11,27 @@ export type Decision = 'accepted' | 'declined' | 'countered'
 export type NextStep = 'answer_offer' | 'answer_counter' | 'confirm' | 'deliver' | 'accept_delivery' | 'mark_paid'
 
 export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
+export type Mode = 'buyer' | 'seller'
 export interface Org {
-  id: string; kind: 'buyer' | 'seller'; display_name: string
+  id: string; display_name: string; is_buyer: boolean; is_seller: boolean
   status: 'pending' | 'active' | 'blocked'; verification_status: VerificationStatus
 }
 export interface Brief { id: string; display_name: string }
 export interface Me {
   id: string; name: string; email: string | null; locale: Lang; is_platform_admin: boolean
-  memberships: { role: 'owner' | 'manager' | 'buyer_staff'; organization: Org }[]
+  memberships: { role: 'owner' | 'manager' | 'buyer_staff'; organization: Org; buyer_ready: boolean }[]
 }
 export interface Category { id: string; parent_id: string | null; slug: string; name: I18nText }
 export interface Product {
-  id: string; seller: Brief; category_id: string | null
+  id: string; seller: Brief | null; category_id: string | null
   name: I18nText; unit: Unit; pack_size: string | null; base_price_amd: number; vat_included: boolean
   min_qty: string; qty_step: string; in_stock: boolean; allow_offers: boolean; images: string[]
   tiers: { min_qty: string; price_amd: number }[]
 }
-export interface ProductPage { items: Product[]; total: number }
-export interface PublicConfig { dev_login: boolean; telegram_bot_username: string }
+export interface ProductPage { items: Product[]; total: number; guest?: boolean }
+export interface PublicConfig {
+  dev_login: boolean; email_login: boolean; google_client_id: string | null; telegram_bot_username: string | null
+}
 
 export interface Address { id: string; label: string; text: string; district: string | null }
 export interface CartLine {
@@ -87,7 +90,7 @@ export interface Company {
 }
 export interface Lookup { tin: string; found: boolean; already_registered: boolean; provider: string; company: Company | null }
 export interface OrgDetail {
-  id: string; kind: 'buyer' | 'seller'; status: 'pending' | 'active' | 'blocked'; legal_name: string
+  id: string; is_buyer: boolean; is_seller: boolean; status: 'pending' | 'active' | 'blocked'; legal_name: string
   display_name: string; tin: string | null; tax_regime: TaxRegime | null; registration_number: string | null
   legal_address: string | null; director_name: string | null; bank_name: string | null; bank_account: string | null
   phone: string | null; email: string | null; venue_type: string | null; registry_source: string | null
@@ -120,13 +123,34 @@ export interface QDocument {
   status: 'draft' | 'issued' | 'failed' | 'cancelled'; issued_at: string | null; payload: DocPayload | null
 }
 export interface NewOrg {
-  kind: 'buyer' | 'seller'; tin: string; legal_name: string; display_name?: string; tax_regime?: TaxRegime | null
+  roles: Mode[]; tin: string; legal_name: string; display_name?: string; tax_regime?: TaxRegime | null
   registration_number?: string | null; legal_address?: string | null; director_name?: string | null
   bank_name?: string | null; bank_account?: string | null; phone?: string | null; email?: string | null
   venue_type?: string | null; delivery_address?: string | null; district?: string | null
 }
 
 export interface LineAnswer { order_line_id: string; decision: Decision; price_amd?: number }
+
+export interface Tier { min_qty: string; price_amd: number }
+export interface Autopilot {
+  enabled: boolean; floor_price_amd: number | null; accept_price_amd: number | null
+  auto_counter: boolean; min_line_amd: number | null
+}
+export interface SellerProduct {
+  id: string; sku: string | null; category_id: string | null; name: I18nText; description: I18nText | null
+  unit: Unit; pack_size: string | null; base_price_amd: number; vat_included: boolean; vat_rate_bp: number
+  min_qty: string; qty_step: string; in_stock: boolean; allow_offers: boolean; archived: boolean
+  tiers: Tier[]; autopilot: Autopilot | null
+}
+export type ProductInput = Omit<SellerProduct, 'id' | 'archived' | 'vat_rate_bp'>
+export interface SellerSettings {
+  min_order_amd: number; cutoff_time: string; lead_days: number; delivery_fee_amd: number
+  free_delivery_from_amd: number | null; offer_response_hours: number
+  zones: { district: string; weekdays: number[] }[]
+}
+
+/** Which company and which side the user acts for: sent with every request. */
+export const context: { orgId: string | null; mode: Mode | null } = { orgId: null, mode: null }
 
 const TOKEN_KEY = 'qb.token'
 const BASE = '/api'
@@ -151,6 +175,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   const t = token.get()
   if (t) headers.set('Authorization', `Bearer ${t}`)
+  if (t && context.orgId) headers.set('X-Org-Id', context.orgId)
+  if (t && context.mode) headers.set('X-Mode', context.mode)
   if (typeof init.body === 'string') headers.set('Content-Type', 'application/json')
   const res = await fetch(BASE + path, { ...init, headers })
   if (!res.ok) {
@@ -182,11 +208,33 @@ export const api = {
   devLogin: (email: string) => post<{ access_token: string }>('/auth/dev-login', { email }),
   me: () => request<Me>('/me'),
   categories: () => request<Category[]>('/categories'),
-  products: (params: { q?: string; category_id?: string; offers_only?: boolean; limit?: number }) => {
+  products: (params: { q?: string; category_id?: string; offers_only?: boolean; limit?: number; ids?: string[] }) => {
     const qs = new URLSearchParams()
-    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '' && v !== false) qs.set(k, String(v))
+    for (const [k, v] of Object.entries(params)) {
+      if (Array.isArray(v)) v.forEach((x) => qs.append(k, x))
+      else if (v !== undefined && v !== '' && v !== false) qs.set(k, String(v))
+    }
     return request<ProductPage>(`/products?${qs}`)
   },
+
+  // sign-in
+  emailStart: (email: string, lang: Lang) => post<{ sent: boolean; dev_code: string | null }>('/auth/email/start', { email, lang }),
+  emailVerify: (email: string, code: string) => post<{ access_token: string }>('/auth/email/verify', { email, code }),
+  google: (credential: string) => post<{ access_token: string }>('/auth/google', { credential }),
+  telegram: (payload: Record<string, unknown>) => post<{ access_token: string }>('/auth/telegram', payload),
+  addRole: (role: Mode, delivery_address?: string, district?: string) =>
+    post<OrgDetail>('/organizations/me/roles', { role, delivery_address, district }),
+
+  // seller cabinet
+  sellerProducts: (archived = false) => request<SellerProduct[]>(`/seller/products?archived=${archived}`),
+  createProduct: (body: ProductInput) => post<SellerProduct>('/seller/products', body),
+  updateProduct: (id: string, body: ProductInput) =>
+    request<SellerProduct>(`/seller/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  archiveProduct: (id: string, archived: boolean) =>
+    post<SellerProduct>(`/seller/products/${id}/${archived ? 'archive' : 'restore'}`),
+  sellerSettings: () => request<SellerSettings>('/seller/settings'),
+  saveSellerSettings: (body: SellerSettings) =>
+    request<SellerSettings>('/seller/settings', { method: 'PUT', body: JSON.stringify(body) }),
 
   cart: () => request<Cart>('/cart'),
   addresses: () => request<Address[]>('/addresses'),

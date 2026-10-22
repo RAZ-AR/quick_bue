@@ -14,8 +14,6 @@ from app.models import (
     FileStatus,
     Organization,
     OrgFile,
-    OrgKind,
-    OrgStatus,
     User,
     VerificationStatus,
 )
@@ -23,23 +21,24 @@ from app.platform import storage
 from app.platform.authz import Action, Actor
 from app.platform.errors import Conflict, NotAllowed, NotFound, ValidationFailed
 
+
 # What an operator needs to see before a company is verified
-REQUIRED: dict[OrgKind, list[FileKind]] = {
-    OrgKind.seller: [FileKind.state_registration],
-    OrgKind.buyer: [FileKind.state_registration],
-}
+def required(org: Organization) -> list[FileKind]:
+    return [FileKind.state_registration]
+
+
 # Shown as optional slots; for food sellers they are what buyers trust
-RECOMMENDED: dict[OrgKind, list[FileKind]] = {
-    OrgKind.seller: [
+def recommended(org: Organization) -> list[FileKind]:
+    if not org.is_seller:
+        return []
+    return [
         FileKind.food_safety_registration,
         FileKind.conformity,
         FileKind.haccp,
         FileKind.veterinary,
         FileKind.phytosanitary,
         FileKind.alcohol_license,
-    ],
-    OrgKind.buyer: [],
-}
+    ]
 
 
 async def files_of(session: AsyncSession, org_id: uuid.UUID) -> list[OrgFile]:
@@ -98,7 +97,7 @@ async def submit(session: AsyncSession, actor: Actor) -> Organization:
     files = await files_of(session, actor.org.id)
     missing = [
         k
-        for k in REQUIRED[actor.org.kind]
+        for k in required(actor.org)
         if not any(f.kind == k and f.status != FileStatus.rejected for f in files)
     ]
     if missing:
@@ -163,15 +162,13 @@ async def review_org(
         files = await files_of(session, org.id)
         missing = [
             k
-            for k in REQUIRED[org.kind]
+            for k in required(org)
             if not any(f.kind == k and f.status == FileStatus.approved for f in files)
         ]
         if missing:
             raise ValidationFailed([{"code": "approve_required_files_first", "kind": k} for k in missing])
         org.verification_status = VerificationStatus.verified
         org.verified_at = now
-        if org.kind == OrgKind.seller and org.status == OrgStatus.pending:
-            org.status = OrgStatus.active  # the seller can trade now
     else:
         org.verification_status = VerificationStatus.rejected
     org.review_note = note

@@ -1,10 +1,9 @@
 import type React from 'react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { LangSwitch } from '../App'
 import { Field, SelectField } from '../components/Field'
 import { problemText, useLang, useT } from '../i18n'
-import { api, ApiError, type Lookup, type Me, type NewOrg, type TaxRegime } from '../lib/api'
+import { api, ApiError, type Lookup, type Mode, type NewOrg, type TaxRegime } from '../lib/api'
+import { useSession } from '../lib/session'
 
 const DISTRICTS = ['Kentron', 'Arabkir', 'Ajapnyak', 'Davtashen', 'Nor Nork', 'Malatia-Sebastia', 'Shengavit', 'Erebuni']
 const VENUES = ['cafe', 'restaurant', 'bar', 'bakery', 'hotel', 'catering', 'other']
@@ -21,12 +20,12 @@ const VENUE_LABEL: Record<string, Record<'hy' | 'ru' | 'en', string>> = {
 type Step = 'role' | 'tin' | 'form'
 
 /** First run without a company: pick a role, find the company by TIN, confirm the requisites. */
-export function Onboarding({ me, onDone, onSignOut }: { me: Me; onDone: () => Promise<void>; onSignOut: () => void }) {
+export function Onboarding() {
+  const { reload } = useSession()
   const t = useT()
   const lang = useLang()
-  const navigate = useNavigate()
   const [step, setStep] = useState<Step>('role')
-  const [form, setForm] = useState<NewOrg>({ kind: 'buyer', tin: '', legal_name: '', venue_type: 'cafe', district: 'Kentron' })
+  const [form, setForm] = useState<NewOrg>({ roles: ['buyer'], tin: '', legal_name: '', venue_type: 'cafe', district: 'Kentron' })
   const [lookup, setLookup] = useState<Lookup | null>(null)
   const [busy, setBusy] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -72,8 +71,8 @@ export function Onboarding({ me, onDone, onSignOut }: { me: Me; onDone: () => Pr
     setErrors({})
     try {
       await api.createOrg(form)
-      await onDone()
-      navigate(form.kind === 'seller' ? '/company' : '/', { replace: true })
+      // The app switches to the company's cabinet; /onboarding there redirects to the documents
+      await reload()
     } catch (err) {
       const ex = err as ApiError
       const byField: Record<string, string> = {}
@@ -87,31 +86,35 @@ export function Onboarding({ me, onDone, onSignOut }: { me: Me; onDone: () => Pr
 
   return (
     <div className="login page">
-      <div className="login-top" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="muted small">{me.name}</span>
-        <span style={{ display: 'flex', gap: 8 }}>
-          <LangSwitch />
-          <button className="link" onClick={onSignOut}>
-            {t('logout')}
-          </button>
-        </span>
-      </div>
-      <h1 className="tagline" style={{ marginTop: 24 }}>
+      <h1 className="tagline" style={{ marginTop: 8 }}>
         {t('onb_title')}
       </h1>
 
       {step === 'role' && (
         <div className="stack">
           <p className="section-title">{t('onb_role')}</p>
-          <button className="reorder-card" style={{ width: '100%', padding: 24 }} onClick={() => (set({ kind: 'buyer' }), setStep('tin'))}>
-            <span className="ibtn" aria-hidden>↗</span>
-            <span className="big">{t('role_buyer')}</span>
-            <span className="names">{t('role_buyer_sub')}</span>
-          </button>
-          <button className="reorder-card ticket dark" style={{ width: '100%', padding: 24 }} onClick={() => (set({ kind: 'seller' }), setStep('tin'))}>
-            <span className="ibtn" aria-hidden>↗</span>
-            <span className="big">{t('role_seller')}</span>
-            <span className="names">{t('role_seller_sub')}</span>
+          {(['buyer', 'seller'] as Mode[]).map((r) => {
+            const on = form.roles.includes(r)
+            return (
+              <button
+                key={r}
+                className={on ? 'reorder-card role-card on' : 'reorder-card role-card'}
+                style={{ width: '100%', padding: 24 }}
+                aria-pressed={on}
+                onClick={() =>
+                  set({ roles: on ? form.roles.filter((x) => x !== r) : [...form.roles, r] })
+                }
+              >
+                <span className="ibtn" aria-hidden>
+                  {on ? '✓' : '+'}
+                </span>
+                <span className="big">{r === 'buyer' ? t('role_buyer') : t('role_seller')}</span>
+                <span className="names">{r === 'buyer' ? t('role_buyer_sub') : t('role_seller_sub')}</span>
+              </button>
+            )
+          })}
+          <button className="btn primary block" disabled={form.roles.length === 0} onClick={() => setStep('tin')}>
+            {t('continue')} →
           </button>
         </div>
       )}
@@ -119,7 +122,7 @@ export function Onboarding({ me, onDone, onSignOut }: { me: Me; onDone: () => Pr
       {step === 'tin' && (
         <section className="ticket" style={{ display: 'grid', gap: 12 }}>
           <span className="pill brand" style={{ justifySelf: 'start' }}>
-            {form.kind === 'buyer' ? t('role_buyer') : t('role_seller')}
+            {form.roles.map((r) => (r === 'buyer' ? t('role_buyer') : t('role_seller'))).join(' + ')}
           </span>
           <Field
             label={t('tin')}
@@ -178,7 +181,7 @@ export function Onboarding({ me, onDone, onSignOut }: { me: Me; onDone: () => Pr
           <Field label={t('director')} {...bind('director_name')} />
           <Field label={t('reg_number')} {...bind('registration_number')} />
           <Field label={t('phone')} inputMode="tel" {...bind('phone')} />
-          {form.kind === 'buyer' ? (
+          {form.roles.includes('buyer') && (
             <>
               <SelectField
                 label={t('venue_type')}
@@ -194,7 +197,8 @@ export function Onboarding({ me, onDone, onSignOut }: { me: Me; onDone: () => Pr
                 options={DISTRICTS.map((d) => ({ value: d, label: d }))}
               />
             </>
-          ) : (
+          )}
+          {form.roles.includes('seller') && (
             <>
               <Field label={t('bank_name')} {...bind('bank_name')} />
               <Field label={t('bank_account')} inputMode="numeric" {...bind('bank_account')} />

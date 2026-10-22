@@ -71,7 +71,7 @@ function CompanyCard({ v, reload }: { v: Verification; reload: () => Promise<voi
         <div>
           <h2>{o.display_name}</h2>
           <span className="muted small">
-            {o.kind === 'seller' ? t('role_seller') : t('role_buyer')} · {VERIFICATION[o.verification_status][lang]}
+            {[o.is_buyer && t('role_buyer'), o.is_seller && t('role_seller')].filter(Boolean).join(' + ')} · {VERIFICATION[o.verification_status][lang]}
           </span>
         </div>
         <span className={o.registry_source === 'manual' ? 'pill lamp' : 'pill plain'}>

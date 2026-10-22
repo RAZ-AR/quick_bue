@@ -25,7 +25,6 @@ from app.models import (
     Membership,
     OfferRule,
     Organization,
-    OrgKind,
     PriceTier,
     Product,
     Role,
@@ -87,21 +86,21 @@ async def seed() -> None:
 
         # --- sellers ---
         lori = Organization(
-            kind=OrgKind.seller,
+            is_seller=True,
             legal_name="Lori Cheese House LLC",
             display_name="Լոռի Պանիր",
             tin="00000001",
             tax_regime=TaxRegime.turnover,
         )
         pack = Organization(
-            kind=OrgKind.seller,
+            is_seller=True,
             legal_name="Yerevan Pack Supply LLC",
             display_name="Yerevan Pack",
             tin="00000002",
             tax_regime=TaxRegime.vat,
         )
         farm = Organization(
-            kind=OrgKind.seller,
+            is_seller=True,
             legal_name="Green Valley Farm",
             display_name="Green Valley",
             tin="00000003",
@@ -291,7 +290,7 @@ async def seed() -> None:
 
         # --- buyers ---
         arax = Organization(
-            kind=OrgKind.buyer,
+            is_buyer=True,
             legal_name="Arax Cafe LLC",
             display_name="Cafe Arax",
             tin="00000011",
@@ -299,7 +298,7 @@ async def seed() -> None:
             venue_type=VenueType.cafe,
         )
         nova = Organization(
-            kind=OrgKind.buyer,
+            is_buyer=True,
             legal_name="Nova Bar LLC",
             display_name="Bar Nova",
             tin="00000012",
@@ -308,6 +307,7 @@ async def seed() -> None:
         )
         s.add_all([arax, nova])
         arax.legal_address, arax.director_name = "Yerevan, Abovyan St 10", "Lilit Harutyunyan"
+        arax.verification_status = nova.verification_status = VerificationStatus.verified
         nova.legal_address, nova.director_name = "Yerevan, Komitas Ave 5", "Karen Vardanyan"
         await s.flush()
         s.add_all(

@@ -20,11 +20,10 @@ from app.models import (
     CartItem,
     DeliveryZone,
     Organization,
-    OrgStatus,
     Product,
     SellerProfile,
 )
-from app.platform.authz import Action, Actor
+from app.platform.authz import Action, Actor, can_sell
 from app.platform.clock import local
 from app.platform.errors import NotFound, ValidationFailed
 from app.services.prices import PriceBook, RuleBook, load_price_book, load_rule_book
@@ -157,7 +156,9 @@ async def build_cart(
             free_delivery_from_amd=profile.free_delivery_from_amd if profile else None,
         )
         group = CartGroup(seller, profile, lines, totals, None, rules=rules)
-        if seller.status != OrgStatus.active:
+        if seller.id == actor.org.id:
+            group.problems.append("own_products")
+        elif not can_sell(seller):
             group.problems.append("seller_unavailable")
         min_order = profile.min_order_amd if profile else 0
         if totals.subtotal_amd < min_order:

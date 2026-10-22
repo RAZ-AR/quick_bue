@@ -20,6 +20,8 @@ dependencies = [
     "uuid6>=2024.7.10",
     "tzdata>=2024.1",  # Asia/Yerevan in slim images
     "python-multipart>=0.0.9",  # file uploads (verification documents)
+    "google-auth>=2.34",  # Sign in with Google: ID token verification
+    "requests>=2.32",  # transport for google-auth
 ]
 
 [project.optional-dependencies]

@@ -33,6 +33,7 @@ from app.models import (
     Order,
     OrderLine,
     OrderStatus,
+    OrgKind,
     PriceSource,
     Product,
     SellerProfile,
@@ -161,6 +162,7 @@ async def respond(
 ) -> Order:
     order = await order_svc.get_for_actor(session, actor, order_id, lock=True)
     side = Side.buyer if order_svc.side_of(actor, order) == By.buyer else Side.seller
+    actor = actor.with_mode(OrgKind.buyer if side == Side.buyer else OrgKind.seller)
     actor.require(Action.order_buyer if side == Side.buyer else Action.order_seller)
     nego = await load_for_order(session, order.id, lock=True)
     if nego is None or order.status != OrderStatus.negotiating:

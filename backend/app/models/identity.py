@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,8 +31,16 @@ class Locale(StrEnum):
 
 
 class OrgKind(StrEnum):
+    """A side of the marketplace. A company can play both; the user switches the mode in the app."""
+
     buyer = "buyer"
     seller = "seller"
+
+
+class AuthProvider(StrEnum):
+    email = "email"
+    google = "google"
+    telegram = "telegram"
 
 
 class OrgStatus(StrEnum):
@@ -85,7 +94,9 @@ class User(UUIDPk, Timestamped, Base):
 class Organization(UUIDPk, Timestamped, Base):
     __tablename__ = "organizations"
 
-    kind: Mapped[OrgKind] = mapped_column(str_enum(OrgKind), index=True)
+    # One company may buy and sell (a bakery buys flour and sells bread). Selling needs verification.
+    is_buyer: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_seller: Mapped[bool] = mapped_column(Boolean, default=False)
     legal_name: Mapped[str] = mapped_column(String(300))
     display_name: Mapped[str] = mapped_column(String(200))
     # Armenian taxpayer ID (ՀՎՀՀ), 8 digits
@@ -111,6 +122,32 @@ class Organization(UUIDPk, Timestamped, Base):
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="organization")
     seller_profile: Mapped["SellerProfile | None"] = relationship(back_populates="organization")
+
+
+class UserIdentity(UUIDPk, Timestamped, Base):
+    """A way to sign in: e-mail address, Google account or Telegram account. One user may have several."""
+
+    __tablename__ = "user_identities"
+    __table_args__ = (UniqueConstraint("provider", "external_id"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[AuthProvider] = mapped_column(str_enum(AuthProvider))
+    external_id: Mapped[str] = mapped_column(String(255))  # e-mail, Google sub, Telegram id
+    email: Mapped[str | None] = mapped_column(String(320))
+    username: Mapped[str | None] = mapped_column(String(255))
+
+
+class LoginCode(UUIDPk, Base):
+    """One-time code sent by e-mail. Only a hash is stored."""
+
+    __tablename__ = "login_codes"
+
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Membership(UUIDPk, Timestamped, Base):

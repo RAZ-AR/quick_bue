@@ -64,7 +64,7 @@ async def test_seller_signs_up_gets_verified_and_trades(client):
         "/organizations",
         headers=me,
         json={
-            "kind": "seller",
+            "roles": ["seller"],
             "tin": company["tin"],
             "legal_name": company["legal_name"],
             "display_name": "Sevan Fish",
@@ -76,7 +76,7 @@ async def test_seller_signs_up_gets_verified_and_trades(client):
     )
     assert r.status_code == 201, r.text
     org = r.json()
-    assert (org["status"], org["verification_status"], org["registry_source"]) == ("pending", "none", "demo")
+    assert (org["is_seller"], org["verification_status"], org["registry_source"]) == (True, "none", "demo")
 
     # Nothing uploaded yet
     r = await client.post("/verification/submit", headers=me)
@@ -113,7 +113,7 @@ async def test_files_are_private(client):
         "/organizations",
         headers=me,
         json={
-            "kind": "buyer",
+            "roles": ["buyer"],
             "tin": "02598301",
             "legal_name": "Cascade Cafe LLC",
             "delivery_address": "Tamanyan 3",
@@ -130,21 +130,21 @@ async def test_files_are_private(client):
 async def test_buyer_signup_rules(client):
     me = await register(client)
     r = await client.post(
-        "/organizations", headers=me, json={"kind": "buyer", "tin": "02598301", "legal_name": "Cascade"}
+        "/organizations", headers=me, json={"roles": ["buyer"], "tin": "02598301", "legal_name": "Cascade"}
     )
     assert r.json()["details"]["problems"][0]["field"] == "delivery_address"
     # A TIN already on QB
     r = await client.post(
         "/organizations",
         headers=me,
-        json={"kind": "buyer", "tin": "00000011", "legal_name": "X", "delivery_address": "Somewhere"},
+        json={"roles": ["buyer"], "tin": "00000011", "legal_name": "X", "delivery_address": "Somewhere"},
     )
     assert (r.status_code, r.json()["code"]) == (409, "tin_taken")
     # A closed company from the registry
     r = await client.post(
         "/organizations",
         headers=me,
-        json={"kind": "buyer", "tin": "02611111", "legal_name": "Old", "delivery_address": "Somewhere"},
+        json={"roles": ["buyer"], "tin": "02611111", "legal_name": "Old", "delivery_address": "Somewhere"},
     )
     assert r.json()["details"]["problems"][0]["code"] == "company_inactive"
     # Buyers start trading at once; typed-by-hand requisites are marked manual
@@ -152,7 +152,7 @@ async def test_buyer_signup_rules(client):
         "/organizations",
         headers=me,
         json={
-            "kind": "buyer",
+            "roles": ["buyer"],
             "tin": "02598301",
             "legal_name": "Cascade Cafe (typed)",
             "delivery_address": "Tamanyan 3",
