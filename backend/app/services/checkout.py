@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.domain import negotiation as neg
-from app.models import CartItem, Checkout, Order, OrderLine, OrderStatus, Role
+from app.models import CartItem, Checkout, Order, OrderLine, OrderStatus, Role, TaxRegime
 from app.platform.authz import Action, Actor
 from app.platform.errors import ValidationFailed
 from app.services import orders as order_svc
@@ -74,6 +74,7 @@ async def checkout(
                     list_price_amd=li.unit_price.amount_amd,
                     price_source=li.unit_price.source,
                     final_price_amd=None if offered is not None else li.unit_price.amount_amd,
+                    vat_rate_bp=li.product.vat_rate_bp if group.seller.tax_regime == TaxRegime.vat else 0,
                 )
             )
         percent = order_offers.get(group.seller.id)

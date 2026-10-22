@@ -7,7 +7,7 @@ import { api, type Category, type OrderListItem, type Product, type ProductPage 
 import { useCart } from '../lib/cart'
 import { amd, date, qty, tr, unit } from '../lib/format'
 
-export function Catalog({ canBuy }: { canBuy: boolean }) {
+export function Catalog({ canBuy, firstName }: { canBuy: boolean; firstName?: string }) {
   const t = useT()
   const lang = useLang()
   const [categories, setCategories] = useState<Category[]>([])
@@ -39,6 +39,10 @@ export function Catalog({ canBuy }: { canBuy: boolean }) {
 
   return (
     <div className="catalog page">
+      <h1 className="page-title">
+        {canBuy && firstName ? `${t('hello')}, ${firstName}!` : t('tab_catalog')}
+        {canBuy && <small>{t('what_today')}</small>}
+      </h1>
       <div className="search-wrap">
         <input
           className="search"
@@ -119,12 +123,15 @@ function QuickReorder() {
               }
             }}
           >
+            <span className="ibtn" aria-hidden>
+              ↻
+            </span>
             <strong>{o.counterparty.display_name}</strong>
             <span className="names">{o.preview.map((n) => tr(n, lang)).join(', ')}</span>
-            <span className="muted small num">
-              {amd(o.total_amd)} · {date(o.created_at, lang)}
+            <span className="big num">{amd(o.total_amd)}</span>
+            <span className="go">
+              {busy === o.id ? t('loading') : t('add_to_cart')} · {date(o.created_at, lang)}
             </span>
-            <span className="go">↻ {busy === o.id ? t('loading') : t('add_to_cart')}</span>
           </button>
         ))}
       </div>
@@ -195,7 +202,7 @@ function BuyControl({ p }: { p: Product }) {
         <QtyStepper value={current} min={p.min_qty} step={p.qty_step} unitLabel={unit(p.unit, lang)} onChange={change} disabled={busy} />
       ) : (
         <button className="add-btn" disabled={busy} onClick={() => change(p.min_qty)}>
-          + {t('add_to_cart')}
+          {t('add_to_cart')}
         </button>
       )}
     </div>

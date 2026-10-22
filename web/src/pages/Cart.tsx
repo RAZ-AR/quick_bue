@@ -88,6 +88,7 @@ export function CartPage() {
 
   return (
     <div className="stack page">
+      <h1 className="page-title">{t('tab_cart')}</h1>
       {cart.groups.map((g) => (
         <SellerTicket
           key={g.seller.id}

@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const BRAND = '#9b2335'
+const BRAND = '#0f0f10'
 
 export default defineConfig({
   plugins: [
@@ -23,7 +23,7 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#faf3e6',
+        background_color: '#ececef',
         theme_color: BRAND,
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

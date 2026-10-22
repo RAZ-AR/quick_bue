@@ -31,6 +31,7 @@ from app.schemas import (
     AgreementIn,
     AgreementOut,
     ConfirmIn,
+    DocumentOut,
     EventOut,
     NegotiationOut,
     OfferOut,
@@ -41,8 +42,10 @@ from app.schemas import (
     ReasonIn,
     RespondIn,
     SellerBrief,
+    SrcNumberIn,
 )
 from app.services import agreements as agreement_svc
+from app.services import documents as doc_svc
 from app.services import negotiation as nego_svc
 from app.services import orders as order_svc
 
@@ -283,6 +286,35 @@ async def create_agreement(body: AgreementIn, session: Session, actor: CurrentAc
 @router.get("/agreements", response_model=list[AgreementOut])
 async def list_agreements(session: Session, actor: CurrentActor):
     return await agreement_svc.list_for_actor(session, actor)
+
+
+@router.get("/orders/{order_id}/documents", response_model=list[DocumentOut])
+async def order_documents(order_id: uuid.UUID, session: Session, actor: CurrentActor):
+    order = await order_svc.get_for_actor(session, actor, order_id)
+    return await doc_svc.list_for_order(session, order)
+
+
+@router.post("/orders/{order_id}/documents", response_model=list[DocumentOut])
+async def issue_documents(order_id: uuid.UUID, session: Session, actor: CurrentActor):
+    """Issue the printable documents due for the order's status (also for orders confirmed earlier)."""
+    order = await order_svc.get_for_actor(session, actor, order_id, lock=True)
+    await doc_svc.ensure_for_order(session, order, utcnow())
+    await session.commit()
+    return await doc_svc.list_for_order(session, order)
+
+
+@router.post("/orders/{order_id}/documents/src", response_model=DocumentOut)
+async def record_src_number(order_id: uuid.UUID, body: SrcNumberIn, session: Session, actor: CurrentActor):
+    order = await order_svc.get_for_actor(session, actor, order_id)
+    doc = await doc_svc.set_src_number(session, actor, order, body.kind, body.number, utcnow())
+    await session.commit()
+    return doc
+
+
+@router.get("/documents/{document_id}", response_model=DocumentOut)
+async def get_document(document_id: uuid.UUID, session: Session, actor: CurrentActor):
+    doc, _ = await doc_svc.get_for_actor(session, actor, document_id)
+    return doc
 
 
 # Declared last: the generic path must not shadow /reorder and /negotiation/respond

@@ -24,8 +24,11 @@ class Channel(StrEnum):
 
 
 class DocumentKind(StrEnum):
-    tax_invoice = "tax_invoice"  # SRC e-invoice (calculation document)
-    waybill = "waybill"
+    invoice = "invoice"  # invoice for payment (Հաշիվ վճարման համար), with bank details
+    delivery_note = "delivery_note"  # goods delivery note (Ապրանքագիր) with transport section
+    acceptance_act = "acceptance_act"  # acceptance act (Ընդունման-հանձնման ակտ), received quantities
+    tax_invoice = "tax_invoice"  # SRC e-invoice issued in the tax system; we keep its number
+    waybill = "waybill"  # SRC e-waybill; we keep its number
 
 
 class DocumentStatus(StrEnum):
@@ -87,16 +90,34 @@ class AuditLog(UUIDPk, Timestamped, Base):
 
 
 class Document(UUIDPk, Timestamped, Base):
-    """Placeholder for SRC e-invoices and waybills (second stage, law HO-309-N). Not filled in the MVP."""
+    """A document of an order.
+
+    Printable ones (invoice, delivery note, act) carry a frozen payload: requisites, lines and totals as they
+    were when issued. SRC ones (tax_invoice, waybill) keep the number from the tax system.
+    """
 
     __tablename__ = "documents"
 
     order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
     kind: Mapped[DocumentKind] = mapped_column(str_enum(DocumentKind))
-    external_id: Mapped[str | None] = mapped_column(String(64))
+    external_id: Mapped[str | None] = mapped_column(String(64))  # SRC number
+    number: Mapped[str | None] = mapped_column(String(32))  # our number, e.g. INV-2026-0007
     status: Mapped[DocumentStatus] = mapped_column(str_enum(DocumentStatus), default=DocumentStatus.draft)
     payload: Mapped[dict | None] = mapped_column(I18nText)
     issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DocumentCounter(Base):
+    """Gap-free numbering per seller, document kind and year."""
+
+    __tablename__ = "document_counters"
+
+    seller_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+    )
+    kind: Mapped[DocumentKind] = mapped_column(str_enum(DocumentKind), primary_key=True)
+    year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class OutboxEvent(UUIDPk, Base):

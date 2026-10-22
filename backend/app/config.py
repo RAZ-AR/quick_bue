@@ -23,6 +23,14 @@ class Settings(BaseSettings):
 
     web_app_url: str = "http://localhost:8090"
 
+    # Company registry used to prefill sign-up by TIN. There is no official public API in Armenia (docs/04):
+    # "demo" = built-in fictional companies, "none" = manual entry only.
+    registry_provider: Literal["demo", "none"] = "demo"
+
+    # Uploaded verification files (local volume; S3/R2 later)
+    media_dir: str = "media"
+    max_upload_mb: int = 10
+
     # Marketplace defaults (sellers can override most of them, see docs/02-mvp.md §6)
     offer_response_hours: int = 24
     offer_max_rounds: int = 3

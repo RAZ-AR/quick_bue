@@ -6,6 +6,7 @@
 - Рынок и концепция: [docs/01-research-and-concept.md](docs/01-research-and-concept.md)
 - MVP — экраны, торг, модель данных, стек, план: [docs/02-mvp.md](docs/02-mvp.md)
 - Принципы, флоу и архитектура: [docs/03-architecture.md](docs/03-architecture.md)
+- Документы РА, регистрация по ИНН, верификация: [docs/04-documents-and-verification.md](docs/04-documents-and-verification.md)
 - Как запускать и устроен код: [CLAUDE.md](CLAUDE.md)
 
 ## Быстрый старт

@@ -10,7 +10,11 @@ export type OrderStatus =
 export type Decision = 'accepted' | 'declined' | 'countered'
 export type NextStep = 'answer_offer' | 'answer_counter' | 'confirm' | 'deliver' | 'accept_delivery' | 'mark_paid'
 
-export interface Org { id: string; kind: 'buyer' | 'seller'; display_name: string }
+export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
+export interface Org {
+  id: string; kind: 'buyer' | 'seller'; display_name: string
+  status: 'pending' | 'active' | 'blocked'; verification_status: VerificationStatus
+}
 export interface Brief { id: string; display_name: string }
 export interface Me {
   id: string; name: string; email: string | null; locale: Lang; is_platform_admin: boolean
@@ -73,6 +77,55 @@ export interface OrderListItem {
   my_side: 'buyer' | 'seller'; next_step: NextStep | null; deadline: string | null; saving_amd: number
   preview: I18nText[]
 }
+export type TaxRegime = 'vat' | 'turnover' | 'micro'
+export type FileKind =
+  | 'state_registration' | 'food_safety_registration' | 'conformity' | 'veterinary'
+  | 'phytosanitary' | 'haccp' | 'alcohol_license' | 'other'
+export interface Company {
+  tin: string; legal_name: string; registration_number: string | null; legal_address: string | null
+  director_name: string | null; tax_regime: TaxRegime | null; active: boolean
+}
+export interface Lookup { tin: string; found: boolean; already_registered: boolean; provider: string; company: Company | null }
+export interface OrgDetail {
+  id: string; kind: 'buyer' | 'seller'; status: 'pending' | 'active' | 'blocked'; legal_name: string
+  display_name: string; tin: string | null; tax_regime: TaxRegime | null; registration_number: string | null
+  legal_address: string | null; director_name: string | null; bank_name: string | null; bank_account: string | null
+  phone: string | null; email: string | null; venue_type: string | null; registry_source: string | null
+  verification_status: VerificationStatus; verified_at: string | null; review_note: string | null
+}
+export interface OrgFile {
+  id: string; kind: FileKind; file_name: string; content_type: string; size_bytes: number
+  status: 'pending' | 'approved' | 'rejected'; expires_on: string | null; review_note: string | null; created_at: string
+}
+export interface Verification { organization: OrgDetail; required: FileKind[]; recommended: FileKind[]; files: OrgFile[] }
+export type DocKind = 'invoice' | 'delivery_note' | 'acceptance_act' | 'tax_invoice' | 'waybill'
+export interface DocLine {
+  n: number; name: I18nText; unit: Unit; qty: string; qty_confirmed?: string; price_amd: number
+  amount_amd: number; vat_rate_bp: number; vat_amd: number
+}
+export interface Party {
+  legal_name: string; display_name: string; tin: string | null; registration_number: string | null
+  legal_address: string | null; director_name: string | null; bank_name: string | null; bank_account: string | null
+  phone: string | null; vat_payer: boolean
+}
+export interface DocPayload {
+  kind: DocKind; title: I18nText; number?: string; date?: string; order_number?: string; delivery_date?: string | null
+  seller?: Party; buyer?: Party; delivery_address?: string | null; lines?: DocLine[]
+  totals?: { subtotal_amd: number; discount_amd: number; delivery_fee_amd: number; total_amd: number; vat_amd: number }
+  vat_note?: string | null; transport?: { from: string | null; to: string | null; vehicle: string | null; driver: string | null }
+  external_id?: string
+}
+export interface QDocument {
+  id: string; kind: DocKind; number: string | null; external_id: string | null
+  status: 'draft' | 'issued' | 'failed' | 'cancelled'; issued_at: string | null; payload: DocPayload | null
+}
+export interface NewOrg {
+  kind: 'buyer' | 'seller'; tin: string; legal_name: string; display_name?: string; tax_regime?: TaxRegime | null
+  registration_number?: string | null; legal_address?: string | null; director_name?: string | null
+  bank_name?: string | null; bank_account?: string | null; phone?: string | null; email?: string | null
+  venue_type?: string | null; delivery_address?: string | null; district?: string | null
+}
+
 export interface LineAnswer { order_line_id: string; decision: Decision; price_amd?: number }
 
 const TOKEN_KEY = 'qb.token'
@@ -98,7 +151,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   const t = token.get()
   if (t) headers.set('Authorization', `Bearer ${t}`)
-  if (init.body) headers.set('Content-Type', 'application/json')
+  if (typeof init.body === 'string') headers.set('Content-Type', 'application/json')
   const res = await fetch(BASE + path, { ...init, headers })
   if (!res.ok) {
     if (res.status === 401) token.clear()
@@ -107,7 +160,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const code = body.code ?? (typeof body.detail === 'string' ? body.detail : res.statusText)
     throw new ApiError(res.status, code, body.details?.problems ?? [])
   }
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
+}
+
+/** Files need the auth header, so they are fetched as blobs and opened from an object URL. */
+export async function openFile(path: string): Promise<void> {
+  const t = token.get()
+  const res = await fetch(BASE + path, { headers: t ? { Authorization: `Bearer ${t}` } : {} })
+  if (!res.ok) throw new ApiError(res.status, 'file_not_found')
+  const url = URL.createObjectURL(await res.blob())
+  window.open(url, '_blank', 'noopener')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 const post = <T>(path: string, body?: unknown, headers?: HeadersInit) =>
@@ -151,4 +215,33 @@ export const api = {
   reorder: (id: string) => post<{ added: number }>(`/orders/${id}/reorder`),
   createAgreement: (orderLineId: string, days = 30) =>
     post<{ id: string }>('/agreements', { order_line_id: orderLineId, days }),
+
+  // sign-up and verification
+  devRegister: (name: string, email: string) => post<{ access_token: string }>('/auth/dev-register', { name, email }),
+  lookup: (tin: string) => request<Lookup>(`/registry/lookup?tin=${encodeURIComponent(tin)}`),
+  createOrg: (body: NewOrg) => post<OrgDetail>('/organizations', body),
+  updateOrg: (body: Partial<OrgDetail>) =>
+    request<OrgDetail>('/organizations/me', { method: 'PATCH', body: JSON.stringify(body) }),
+  verification: () => request<Verification>('/verification'),
+  uploadFile: (kind: FileKind, file: File, expiresOn?: string) => {
+    const form = new FormData()
+    form.append('kind', kind)
+    form.append('file', file)
+    if (expiresOn) form.append('expires_on', expiresOn)
+    return request<OrgFile>('/verification/files', { method: 'POST', body: form })
+  },
+  deleteFile: (id: string) => request<void>(`/verification/files/${id}`, { method: 'DELETE' }),
+  submitVerification: () => post<Verification>('/verification/submit'),
+  adminQueue: (status: VerificationStatus[] = ['pending']) =>
+    request<Verification[]>(`/admin/verification?${status.map((s) => `status=${s}`).join('&')}`),
+  reviewFile: (id: string, approve: boolean, note?: string) => post<OrgFile>(`/admin/files/${id}/review`, { approve, note }),
+  reviewOrg: (id: string, approve: boolean, note?: string) =>
+    post<OrgDetail>(`/admin/organizations/${id}/review`, { approve, note }),
+
+  // order documents
+  documents: (orderId: string) => request<QDocument[]>(`/orders/${orderId}/documents`),
+  issueDocuments: (orderId: string) => post<QDocument[]>(`/orders/${orderId}/documents`),
+  srcNumber: (orderId: string, kind: 'tax_invoice' | 'waybill', number: string) =>
+    post<QDocument>(`/orders/${orderId}/documents/src`, { kind, number }),
+  document: (id: string) => request<QDocument>(`/documents/${id}`),
 }

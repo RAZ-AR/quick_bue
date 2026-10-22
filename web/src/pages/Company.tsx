@@ -1,0 +1,215 @@
+import type React from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Field, SelectField } from '../components/Field'
+import { FILE_KINDS, FILE_STATUS, problemText, useLang, useT, VERIFICATION } from '../i18n'
+import { api, ApiError, openFile, type FileKind, type OrgDetail, type OrgFile, type TaxRegime, type Verification } from '../lib/api'
+import { date } from '../lib/format'
+
+/** The company profile: requisites printed on documents, and the verification checklist. */
+export function Company({ onChanged }: { onChanged: () => Promise<void> }) {
+  const t = useT()
+  const lang = useLang()
+  const [v, setV] = useState<Verification | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(() => api.verification().then(setV, (e: ApiError) => setError(problemText(e.code, lang))), [lang])
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  if (!v) return error ? <p className="error">{error}</p> : <p className="muted">{t('loading')}</p>
+  const org = v.organization
+
+  return (
+    <div className="stack page">
+      <h1 className="page-title">
+        {org.display_name}
+        <small>
+          {t('tin')}: <span className="num">{org.tin}</span>
+        </small>
+      </h1>
+      <VerificationBlock v={v} reload={load} onChanged={onChanged} />
+      <Requisites org={org} onSaved={load} />
+    </div>
+  )
+}
+
+function VerificationBlock({ v, reload, onChanged }: { v: Verification; reload: () => Promise<void>; onChanged: () => Promise<void> }) {
+  const t = useT()
+  const lang = useLang()
+  const org = v.organization
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const status = org.verification_status
+  const tone = status === 'verified' ? 'ticket dark' : status === 'pending' || status === 'none' ? 'ticket accent' : 'ticket'
+
+  async function submit() {
+    setBusy(true)
+    setError(null)
+    try {
+      await api.submitVerification()
+      await reload()
+      await onChanged()
+    } catch (e) {
+      const ex = e as ApiError
+      setError(ex.problems?.length ? ex.problems.map((p) => problemText(p.code, lang)).join(' · ') : problemText(ex.code, lang))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const kinds: { kind: FileKind; required: boolean }[] = [
+    ...v.required.map((k) => ({ kind: k, required: true })),
+    ...v.recommended.map((k) => ({ kind: k, required: false })),
+  ]
+  return (
+    <>
+      <section className={tone}>
+        <header className="ticket-head">
+          <h2>{t('verification')}</h2>
+          <span className="pill brand">{VERIFICATION[status][lang]}</span>
+        </header>
+        {status === 'verified' && org.verified_at && <p style={{ margin: '10px 0 0' }}>✓ {date(org.verified_at, lang)}</p>}
+        {org.review_note && <p style={{ margin: '10px 0 0' }}>💬 {org.review_note}</p>}
+        {org.kind === 'seller' && org.status === 'pending' && (
+          <p style={{ margin: '10px 0 0' }}>{status === 'pending' ? t('pending_seller_banner') : t('upload_to_sell')}</p>
+        )}
+      </section>
+
+      <section className="ticket">
+        <p className="muted small" style={{ marginTop: 0 }}>
+          {t('files_hint')}
+        </p>
+        <ul className="lines">
+          {kinds.map(({ kind, required }) => (
+            <FileSlot key={kind} kind={kind} required={required} files={v.files.filter((f) => f.kind === kind)} reload={reload} />
+          ))}
+        </ul>
+        {error && <p className="error">{error}</p>}
+        {status !== 'verified' && status !== 'pending' && (
+          <button className="btn primary block" disabled={busy} onClick={submit}>
+            {t('submit_review')} →
+          </button>
+        )}
+      </section>
+    </>
+  )
+}
+
+function FileSlot({ kind, required, files, reload }: { kind: FileKind; required: boolean; files: OrgFile[]; reload: () => Promise<void> }) {
+  const t = useT()
+  const lang = useLang()
+  const input = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    setError(null)
+    try {
+      await api.uploadFile(kind, file)
+      await reload()
+    } catch (err) {
+      const ex = err as ApiError
+      setError(problemText(ex.problems?.[0]?.code ?? ex.code, lang))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <li className="line">
+      <div className="line-main">
+        <div>
+          <div className="line-name">{FILE_KINDS[kind][lang]}</div>
+          <div className="line-sub">{required ? t('required') : t('recommended')}</div>
+        </div>
+        <button className={files.length ? 'ibtn' : 'ibtn dark'} disabled={busy} onClick={() => input.current?.click()} aria-label={t('upload')} title={t('upload')}>
+          {busy ? '…' : '+'}
+        </button>
+        <input ref={input} type="file" accept="application/pdf,image/*" hidden onChange={pick} />
+      </div>
+      {files.map((f) => (
+        <div key={f.id} className="line-tools">
+          <button className="link small" onClick={() => void openFile(`/files/${f.id}`)}>
+            📄 {f.file_name}
+          </button>
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span className={f.status === 'approved' ? 'pill brand' : f.status === 'rejected' ? 'pill plain' : 'pill lamp'}>
+              {FILE_STATUS[f.status][lang]}
+            </span>
+            {f.status !== 'approved' && (
+              <button className="link" onClick={async () => (await api.deleteFile(f.id), await reload())} aria-label={t('remove')}>
+                ✕
+              </button>
+            )}
+          </span>
+          {f.review_note && <span className="muted small" style={{ flexBasis: '100%' }}>💬 {f.review_note}</span>}
+        </div>
+      ))}
+      {error && <p className="error small">{error}</p>}
+    </li>
+  )
+}
+
+function Requisites({ org, onSaved }: { org: OrgDetail; onSaved: () => Promise<void> }) {
+  const t = useT()
+  const [form, setForm] = useState(org)
+  const [saved, setSaved] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const bind = (key: keyof OrgDetail) => ({
+    value: (form[key] as string | null) ?? '',
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => (setForm((f) => ({ ...f, [key]: e.target.value })), setSaved(false)),
+  })
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      const { display_name, legal_address, director_name, bank_name, bank_account, phone, email, registration_number, tax_regime } = form
+      await api.updateOrg({ display_name, legal_address, director_name, bank_name, bank_account, phone, email, registration_number, tax_regime })
+      await onSaved()
+      setSaved(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className="ticket" style={{ display: 'grid', gap: 12 }} onSubmit={save}>
+      <header className="ticket-head">
+        <h2>{t('requisites')}</h2>
+        {org.registry_source && <span className="pill plain">{org.registry_source === 'manual' ? '✎' : '✓'} {org.registry_source}</span>}
+      </header>
+      <p className="muted small" style={{ margin: 0 }}>
+        {t('requisites_hint')}
+      </p>
+      <Field label={t('legal_name')} value={org.legal_name} disabled />
+      <Field label={t('display_name')} {...bind('display_name')} />
+      <SelectField
+        label={t('tax_regime')}
+        value={form.tax_regime ?? ''}
+        onChange={(e) => (setForm((f) => ({ ...f, tax_regime: (e.target.value || null) as TaxRegime | null })), setSaved(false))}
+        options={[
+          { value: '', label: '—' },
+          { value: 'vat', label: t('regime_vat') },
+          { value: 'turnover', label: t('regime_turnover') },
+          { value: 'micro', label: t('regime_micro') },
+        ]}
+      />
+      <Field label={t('legal_address')} {...bind('legal_address')} />
+      <Field label={t('director')} {...bind('director_name')} />
+      <Field label={t('reg_number')} {...bind('registration_number')} />
+      <Field label={t('bank_name')} {...bind('bank_name')} />
+      <Field label={t('bank_account')} inputMode="numeric" {...bind('bank_account')} />
+      <Field label={t('phone')} inputMode="tel" {...bind('phone')} />
+      <Field label={t('email')} type="email" {...bind('email')} />
+      <button className="btn primary block" disabled={busy}>
+        {saved ? `✓ ${t('saved')}` : t('save')}
+      </button>
+    </form>
+  )
+}

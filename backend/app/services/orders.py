@@ -46,6 +46,7 @@ from app.platform.authz import Action, Actor
 from app.platform.clock import local
 from app.platform.errors import Conflict, NotFound, ValidationFailed
 from app.platform.outbox import emit, jsonable
+from app.services import documents
 
 # --- loading and access ------------------------------------------------------------------------------------
 
@@ -255,6 +256,7 @@ async def confirm(
     order.seller_note = note or order.seller_note
     before = order.total_amd
     await recompute(session, order)
+    await documents.ensure_for_order(session, order, now)  # invoice + delivery note
     changed = [str(li.id) for li in order.lines if Decimal(li.qty_confirmed) != Decimal(li.qty_ordered)]
     log(
         session,
@@ -315,6 +317,7 @@ async def accept(
         line.qty_received = received_qty.get(line.id, effective_qty(line))
     apply(order, OrderAction.accept, by, now)
     await settle_commission(session, order, now)
+    await documents.ensure_for_order(session, order, now)  # acceptance act with received quantities
     short = [str(li.id) for li in order.lines if Decimal(li.qty_received) < effective_qty(li)]
     log(session, order, "accepted", actor.user.id if actor else None, auto=actor is None, short_lines=short)
     return order

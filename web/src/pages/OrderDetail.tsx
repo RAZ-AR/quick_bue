@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { OrderConvergence } from '../components/Negotiation'
+import { OrderDocuments } from '../components/OrderDocuments'
 import { PriceDial } from '../components/PriceDial'
 import { StageRail } from '../components/StageRail'
 import { Countdown } from '../components/ui'
@@ -183,6 +184,8 @@ export function OrderDetail() {
           )}
         </dl>
       </section>
+
+      <OrderDocuments order={order} />
 
       {error && <p className="error">{error}</p>}
       {actions.length > 0 && (

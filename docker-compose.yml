@@ -7,6 +7,9 @@ x-backend: &backend
   environment:
     DATABASE_URL: postgresql+asyncpg://qb:${POSTGRES_PASSWORD:-qb}@db:5432/qb
     REDIS_URL: redis://redis:6379/0
+    MEDIA_DIR: /app/media
+  volumes:
+    - media:/app/media  # uploaded verification files
   depends_on:
     db: { condition: service_healthy }
     redis: { condition: service_started }
@@ -63,3 +66,4 @@ services:
 
 volumes:
   pgdata:
+  media:

@@ -56,6 +56,13 @@ class VenueType(StrEnum):
     other = "other"
 
 
+class VerificationStatus(StrEnum):
+    none = "none"  # nothing submitted yet
+    pending = "pending"  # submitted, waiting for an operator
+    verified = "verified"
+    rejected = "rejected"
+
+
 class Role(StrEnum):
     owner = "owner"
     manager = "manager"  # seller-side sales manager
@@ -86,6 +93,21 @@ class Organization(UUIDPk, Timestamped, Base):
     tax_regime: Mapped[TaxRegime | None] = mapped_column(str_enum(TaxRegime))
     status: Mapped[OrgStatus] = mapped_column(str_enum(OrgStatus), default=OrgStatus.active)
     venue_type: Mapped[VenueType | None] = mapped_column(str_enum(VenueType))
+    # Requisites printed on invoices, delivery notes and acts
+    registration_number: Mapped[str | None] = mapped_column(String(32))  # state register number
+    legal_address: Mapped[str | None] = mapped_column(Text)
+    director_name: Mapped[str | None] = mapped_column(String(200))
+    bank_name: Mapped[str | None] = mapped_column(String(200))
+    bank_account: Mapped[str | None] = mapped_column(String(34))
+    phone: Mapped[str | None] = mapped_column(String(32))
+    email: Mapped[str | None] = mapped_column(String(320))
+    # Where the registry data came from: demo, manual, or a provider name
+    registry_source: Mapped[str | None] = mapped_column(String(32))
+    verification_status: Mapped[VerificationStatus] = mapped_column(
+        str_enum(VerificationStatus), default=VerificationStatus.none
+    )
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_note: Mapped[str | None] = mapped_column(Text)
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="organization")
     seller_profile: Mapped["SellerProfile | None"] = relationship(back_populates="organization")

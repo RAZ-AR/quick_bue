@@ -26,6 +26,7 @@ from app.models.identity import (
     TaxRegime,
     User,
     VenueType,
+    VerificationStatus,
 )
 from app.models.negotiation import (
     LineDecision,
@@ -57,6 +58,7 @@ from app.models.platform import (
     CommissionRule,
     CommissionStatement,
     Document,
+    DocumentCounter,
     DocumentKind,
     DocumentStatus,
     IdempotencyKey,
@@ -64,6 +66,7 @@ from app.models.platform import (
     OutboxEvent,
     StatementStatus,
 )
+from app.models.verification import FileKind, FileStatus, OrgFile
 
 __all__ = [
     "Address",
@@ -83,8 +86,11 @@ __all__ = [
     "CommissionStatement",
     "DeliveryZone",
     "Document",
+    "DocumentCounter",
     "DocumentKind",
     "DocumentStatus",
+    "FileKind",
+    "FileStatus",
     "IdempotencyKey",
     "Invite",
     "LineDecision",
@@ -104,6 +110,7 @@ __all__ = [
     "OrderEvent",
     "OrderLine",
     "OrderStatus",
+    "OrgFile",
     "OrgKind",
     "OrgStatus",
     "OutboxEvent",
@@ -122,4 +129,5 @@ __all__ = [
     "Unit",
     "User",
     "VenueType",
+    "VerificationStatus",
 ]

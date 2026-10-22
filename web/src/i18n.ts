@@ -135,6 +135,105 @@ export const TEXTS = {
   },
   between: { hy: 'Ձեր գինը', ru: 'Ваша цена', en: 'Your price' },
   more: { hy: 'ևս', ru: 'ещё', en: 'more' },
+  hello: { hy: 'Բարև', ru: 'Привет', en: 'Hello' },
+  what_today: { hy: 'Ի՞նչ ենք պատվիրում այսօր', ru: 'Что заказываем сегодня?', en: 'What are we ordering today?' },
+  open: { hy: 'Բացել', ru: 'Открыть', en: 'Open' },
+
+  // sign-up
+  register: { hy: 'Գրանցվել', ru: 'Зарегистрироваться', en: 'Sign up' },
+  your_name: { hy: 'Ձեր անունը', ru: 'Ваше имя', en: 'Your name' },
+  email: { hy: 'Էլ. փոստ', ru: 'Эл. почта', en: 'E-mail' },
+  or: { hy: 'կամ', ru: 'или', en: 'or' },
+  onb_title: { hy: 'Ձեր ընկերությունը', ru: 'Ваша компания', en: 'Your company' },
+  onb_role: { hy: 'Ինչ եք անում QB-ում', ru: 'Что вы делаете в QB?', en: 'What do you do on QB?' },
+  role_buyer: { hy: 'Գնում եմ հաստատության համար', ru: 'Закупаю для заведения', en: 'I buy for a venue' },
+  role_buyer_sub: { hy: 'Սրճարան, ռեստորան, բար, հյուրանոց', ru: 'Кафе, ресторан, бар, отель', en: 'Cafe, restaurant, bar, hotel' },
+  role_seller: { hy: 'Վաճառում եմ', ru: 'Продаю', en: 'I sell' },
+  role_seller_sub: { hy: 'Մեծածախ, խանութ, արտադրող', ru: 'Опт, магазин, производитель', en: 'Wholesale, shop, producer' },
+  tin: { hy: 'ՀՎՀՀ', ru: 'ИНН (ՀՎՀՀ)', en: 'TIN (ՀՎՀՀ)' },
+  tin_hint: { hy: '8 թիվ', ru: '8 цифр', en: '8 digits' },
+  find: { hy: 'Գտնել', ru: 'Найти', en: 'Find' },
+  found_in: { hy: 'Գտնվել է ռեեստրում', ru: 'Нашли в реестре', en: 'Found in the registry' },
+  demo_data: { hy: 'դեմո տվյալներ', ru: 'демо-данные', en: 'demo data' },
+  not_found_manual: {
+    hy: 'Չգտանք։ Լրացրեք ձեռքով, օպերատորը կստուգի։',
+    ru: 'Не нашли — заполните вручную, оператор проверит.',
+    en: 'Not found — fill in by hand, an operator will check.',
+  },
+  already_on_qb: {
+    hy: 'Այս ընկերությունն արդեն QB-ում է։ Խնդրեք սեփականատիրոջը հրավիրել ձեզ։',
+    ru: 'Эта компания уже в QB. Попросите владельца пригласить вас.',
+    en: 'This company is already on QB. Ask its owner to invite you.',
+  },
+  company_closed: { hy: 'Ընկերությունը գործող չէ', ru: 'Компания не действует', en: 'The company is not active' },
+  legal_name: { hy: 'Իրավաբանական անվանում', ru: 'Юридическое название', en: 'Legal name' },
+  display_name: { hy: 'Անունը QB-ում', ru: 'Название в QB', en: 'Name on QB' },
+  legal_address: { hy: 'Իրավաբանական հասցե', ru: 'Юридический адрес', en: 'Legal address' },
+  director: { hy: 'Տնօրեն', ru: 'Директор', en: 'Director' },
+  reg_number: { hy: 'Պետ. գրանցման համար', ru: 'Номер гос. регистрации', en: 'Registration number' },
+  tax_regime: { hy: 'Հարկային ռեժիմ', ru: 'Налоговый режим', en: 'Tax regime' },
+  regime_vat: { hy: 'ԱԱՀ վճարող', ru: 'Плательщик НДС', en: 'VAT payer' },
+  regime_turnover: { hy: 'Շրջանառության հարկ', ru: 'Налог с оборота', en: 'Turnover tax' },
+  regime_micro: { hy: 'Միկրոձեռնարկություն', ru: 'Микробизнес', en: 'Micro business' },
+  bank_name: { hy: 'Բանկ', ru: 'Банк', en: 'Bank' },
+  bank_account: { hy: 'Հաշվեհամար', ru: 'Расчётный счёт', en: 'Bank account' },
+  phone: { hy: 'Հեռախոս', ru: 'Телефон', en: 'Phone' },
+  venue_type: { hy: 'Հաստատության տեսակ', ru: 'Тип заведения', en: 'Venue type' },
+  delivery_address: { hy: 'Առաքման հասցե', ru: 'Адрес доставки', en: 'Delivery address' },
+  district: { hy: 'Թաղամաս', ru: 'Район', en: 'District' },
+  create_company: { hy: 'Ստեղծել', ru: 'Создать компанию', en: 'Create company' },
+  back_step: { hy: 'Հետ', ru: 'Назад', en: 'Back' },
+  save: { hy: 'Պահպանել', ru: 'Сохранить', en: 'Save' },
+  saved: { hy: 'Պահպանված է', ru: 'Сохранено', en: 'Saved' },
+
+  // company & verification
+  tab_company: { hy: 'Ընկերություն', ru: 'Компания', en: 'Company' },
+  requisites: { hy: 'Վավերապայմաններ', ru: 'Реквизиты', en: 'Requisites' },
+  requisites_hint: {
+    hy: 'Տպվում են հաշիվներում և ապրանքագրերում',
+    ru: 'Печатаются в счетах и накладных',
+    en: 'Printed on invoices and delivery notes',
+  },
+  verification: { hy: 'Ստուգում', ru: 'Проверка', en: 'Verification' },
+  required: { hy: 'պարտադիր', ru: 'обязательно', en: 'required' },
+  recommended: { hy: 'ցանկալի', ru: 'желательно', en: 'recommended' },
+  upload: { hy: 'Վերբեռնել', ru: 'Загрузить', en: 'Upload' },
+  submit_review: { hy: 'Ուղարկել ստուգման', ru: 'Отправить на проверку', en: 'Submit for review' },
+  pending_seller_banner: {
+    hy: 'Ընկերությունը ստուգման մեջ է։ Վաճառքը կբացվի հաստատումից հետո։',
+    ru: 'Компания на проверке. Продажи откроются после подтверждения.',
+    en: 'Your company is under review. Selling opens after approval.',
+  },
+  upload_to_sell: {
+    hy: 'Վաճառքը սկսելու համար վերբեռնեք փաստաթղթերը և ուղարկեք ստուգման',
+    ru: 'Чтобы начать продавать, загрузите документы и отправьте на проверку',
+    en: 'To start selling, upload your documents and submit them for review',
+  },
+  files_hint: { hy: 'PDF կամ լուսանկար, մինչև 10 ՄԲ', ru: 'PDF или фото, до 10 МБ', en: 'PDF or photo, up to 10 MB' },
+  remove: { hy: 'Ջնջել', ru: 'Удалить', en: 'Delete' },
+  valid_until: { hy: 'Վավեր է մինչև', ru: 'Действует до', en: 'Valid until' },
+
+  // operator
+  tab_moderation: { hy: 'Մոդերացիա', ru: 'Модерация', en: 'Moderation' },
+  queue_empty: { hy: 'Հերթը դատարկ է', ru: 'Очередь пуста', en: 'Queue is empty' },
+  approve: { hy: 'Հաստատել', ru: 'Одобрить', en: 'Approve' },
+  reject: { hy: 'Մերժել', ru: 'Отклонить', en: 'Reject' },
+  approve_company: { hy: 'Հաստատել ընկերությունը', ru: 'Одобрить компанию', en: 'Approve company' },
+  note: { hy: 'Մեկնաբանություն', ru: 'Комментарий', en: 'Note' },
+  typed_by_hand: { hy: 'Մուտքագրված է ձեռքով', ru: 'Введено вручную — сверьте с реестром', en: 'Typed by hand — check the registry' },
+
+  // documents
+  documents: { hy: 'Փաստաթղթեր', ru: 'Документы', en: 'Documents' },
+  issue_docs: { hy: 'Ձևավորել փաստաթղթերը', ru: 'Сформировать документы', en: 'Issue documents' },
+  src_title: { hy: 'ՊԵԿ էլեկտրոնային փաստաթղթեր', ru: 'Электронные документы КГД', en: 'SRC e-documents' },
+  src_hint: {
+    hy: 'Դուրս գրեք ՊԵԿ համակարգում և նշեք համարը',
+    ru: 'Выпишите в системе КГД и укажите номер здесь',
+    en: 'Issue them in the SRC system and record the number here',
+  },
+  src_invoice_no: { hy: 'Էլ. հաշվարկային փաստաթղթի №', ru: '№ электронного счёта', en: 'E-invoice No.' },
+  src_waybill_no: { hy: 'Ուղեկցող փաստաթղթի №', ru: '№ путевого листа', en: 'E-waybill No.' },
+  print: { hy: 'Տպել / PDF', ru: 'Печать / PDF', en: 'Print / PDF' },
 } satisfies Record<string, T3>
 
 export const ACTIONS: Record<string, T3> = {
@@ -171,6 +270,34 @@ export const STAGES: Record<string, T3> = {
   delivering: { hy: 'Ճանապարհին', ru: 'В пути', en: 'On the way' },
   delivered: { hy: 'Առաքված', ru: 'Доставлен', en: 'Delivered' },
   accepted: { hy: 'Ընդունված', ru: 'Принят', en: 'Accepted' },
+}
+
+export const FILE_KINDS: Record<string, T3> = {
+  state_registration: { hy: 'Պետական ռեգիստրի քաղվածք', ru: 'Выписка из госреестра', en: 'State register extract' },
+  food_safety_registration: {
+    hy: 'Սննդամթերքի անվտանգության տեսչական մարմնում հաշվառում',
+    ru: 'Учёт в Инспекции пищевой безопасности',
+    en: 'Food Safety Inspection Body registration',
+  },
+  conformity: { hy: 'ԵԱՏՄ համապատասխանության սերտիֆիկատ / հայտարարագիր', ru: 'Сертификат / декларация соответствия ЕАЭС', en: 'EAEU conformity certificate / declaration' },
+  veterinary: { hy: 'Անասնաբուժական-սանիտարական վկայական', ru: 'Ветеринарно-санитарное свидетельство', en: 'Veterinary-sanitary certificate' },
+  phytosanitary: { hy: 'Բուսասանիտարական վկայական', ru: 'Фитосанитарный сертификат', en: 'Phytosanitary certificate' },
+  haccp: { hy: 'HACCP', ru: 'HACCP', en: 'HACCP' },
+  alcohol_license: { hy: 'Ալկոհոլի լիցենզիա', ru: 'Лицензия на алкоголь', en: 'Alcohol licence' },
+  other: { hy: 'Այլ', ru: 'Другое', en: 'Other' },
+}
+
+export const VERIFICATION: Record<string, T3> = {
+  none: { hy: 'Չի ստուգվել', ru: 'Не проверена', en: 'Not verified' },
+  pending: { hy: 'Ստուգման մեջ', ru: 'На проверке', en: 'Under review' },
+  verified: { hy: 'Ստուգված', ru: 'Проверена', en: 'Verified' },
+  rejected: { hy: 'Մերժված', ru: 'Отклонена', en: 'Rejected' },
+}
+
+export const FILE_STATUS: Record<string, T3> = {
+  pending: { hy: 'Սպասում է', ru: 'Ждёт проверки', en: 'Waiting' },
+  approved: { hy: 'Հաստատված', ru: 'Принят', en: 'Approved' },
+  rejected: { hy: 'Մերժված', ru: 'Отклонён', en: 'Rejected' },
 }
 
 export const STATUSES: Record<string, T3> = {
@@ -212,6 +339,16 @@ export const PROBLEMS: Record<string, T3> = {
   address_required: { hy: 'Նշեք հասցեն', ru: 'Укажите адрес', en: 'Address required' },
   not_your_turn: { hy: 'Հիմա ձեր հերթը չէ', ru: 'Сейчас не ваш ход', en: 'Not your turn' },
   negotiation_expired: { hy: 'Ժամկետն անցել է', ru: 'Срок ответа истёк', en: 'Time is up' },
+  bad_tin: { hy: 'ՀՎՀՀ-ն 8 թիվ է', ru: 'ИНН — это 8 цифр', en: 'TIN is 8 digits' },
+  tin_taken: { hy: 'Ընկերությունն արդեն QB-ում է', ru: 'Компания уже в QB', en: 'Company already on QB' },
+  company_inactive: { hy: 'Ընկերությունը գործող չէ', ru: 'Компания не действует', en: 'Company is not active' },
+  required: { hy: 'Պարտադիր դաշտ', ru: 'Обязательное поле', en: 'Required field' },
+  file_required: { hy: 'Վերբեռնեք պարտադիր փաստաթուղթը', ru: 'Загрузите обязательный документ', en: 'Upload the required document' },
+  file_type_not_allowed: { hy: 'Միայն PDF կամ նկար', ru: 'Только PDF или фото', en: 'PDF or image only' },
+  file_too_large: { hy: 'Ֆայլը մեծ է', ru: 'Файл слишком большой', en: 'File too large' },
+  approve_required_files_first: { hy: 'Նախ հաստատեք պարտադիր ֆայլերը', ru: 'Сначала одобрите обязательные файлы', en: 'Approve required files first' },
+  order_not_confirmed: { hy: 'Պատվերը հաստատված չէ', ru: 'Заказ ещё не подтверждён', en: 'Order not confirmed yet' },
+  email_taken: { hy: 'Էլ. փոստն զբաղված է', ru: 'Эта почта уже занята', en: 'E-mail already used' },
   invalid_transition: { hy: 'Պատվերն արդեն փոխվել է', ru: 'Заказ уже изменился — обновите', en: 'The order changed, refresh' },
 }
 

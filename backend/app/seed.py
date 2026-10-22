@@ -35,6 +35,7 @@ from app.models import (
     Unit,
     User,
     VenueType,
+    VerificationStatus,
 )
 
 CATEGORIES = [
@@ -107,6 +108,21 @@ async def seed() -> None:
             tax_regime=TaxRegime.micro,
         )
         sellers = [lori, pack, farm]
+        # Requisites for documents (fictional). Demo sellers are already verified by the operator.
+        requisites = {
+            lori: ("Lori, Stepanavan, Shahumyan St 5", "Anahit Hovsepyan", "Ameriabank", "1570012345670100"),
+            pack: ("Yerevan, Tigran Mets Ave 48", "Arman Sahakyan", "Ardshinbank", "2470098765430100"),
+            farm: ("Ararat, Masis, Orchard St 2", "Gor Mkrtchyan", "IDBank", "1180055555550100"),
+        }
+        for org, (address, director, bank, account) in requisites.items():
+            org.legal_address, org.director_name, org.bank_name, org.bank_account = (
+                address,
+                director,
+                bank,
+                account,
+            )
+            org.verification_status = VerificationStatus.verified
+            org.registry_source = "demo"
         s.add_all(sellers)
         await s.flush()
 
@@ -291,6 +307,8 @@ async def seed() -> None:
             venue_type=VenueType.bar,
         )
         s.add_all([arax, nova])
+        arax.legal_address, arax.director_name = "Yerevan, Abovyan St 10", "Lilit Harutyunyan"
+        nova.legal_address, nova.director_name = "Yerevan, Komitas Ave 5", "Karen Vardanyan"
         await s.flush()
         s.add_all(
             [

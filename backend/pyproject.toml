@@ -19,6 +19,7 @@ dependencies = [
     "apscheduler>=3.10,<4",
     "uuid6>=2024.7.10",
     "tzdata>=2024.1",  # Asia/Yerevan in slim images
+    "python-multipart>=0.0.9",  # file uploads (verification documents)
 ]
 
 [project.optional-dependencies]

@@ -8,6 +8,10 @@ import { CartProvider, useCart, useCartMaybe } from './lib/cart'
 import { amd } from './lib/format'
 import { CartPage } from './pages/Cart'
 import { Catalog } from './pages/Catalog'
+import { Company } from './pages/Company'
+import { Moderation } from './pages/Moderation'
+import { Onboarding } from './pages/Onboarding'
+import { PrintDocument } from './pages/PrintDocument'
 import { Login } from './pages/Login'
 import { OrderDetail } from './pages/OrderDetail'
 import { Orders } from './pages/Orders'
@@ -62,19 +66,32 @@ export function App() {
   }, [lang])
 
   const ctx = useMemo(() => ({ lang, setLang }), [lang, setLang])
+  const signOut = useCallback(() => {
+    token.clear()
+    setMe(null)
+  }, [])
 
   if (!checked) return null
 
   return (
     <LangContext.Provider value={ctx}>
       {me ? (
-        <Shell
-          me={me}
-          onSignOut={() => {
-            token.clear()
-            setMe(null)
-          }}
-        />
+        <Routes>
+          {/* A4 printout: no app chrome */}
+          <Route path="/print/:id" element={<PrintDocument />} />
+          <Route
+            path="*"
+            element={
+              me.memberships.length === 0 && me.is_platform_admin ? (
+                <AdminShell me={me} onSignOut={signOut} />
+              ) : me.memberships.length === 0 ? (
+                <Onboarding me={me} onDone={loadMe} onSignOut={signOut} />
+              ) : (
+                <Shell me={me} onSignOut={signOut} onOrgChanged={loadMe} />
+              )
+            }
+          />
+        </Routes>
       ) : (
         <Routes>
           <Route path="*" element={<Login onSignedIn={loadMe} />} />
@@ -84,37 +101,67 @@ export function App() {
   )
 }
 
-function Shell({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
+function TopBar({ title, sub, onSignOut }: { title: string; sub: string; onSignOut: () => void }) {
   const t = useT()
   const navigate = useNavigate()
+  return (
+    <header className="topbar">
+      <div className="brand">QB</div>
+      <div className="who">
+        <span>{title}</span>
+        <small>{sub}</small>
+      </div>
+      <LangSwitch />
+      <button
+        className="link"
+        onClick={() => {
+          onSignOut()
+          navigate('/')
+        }}
+      >
+        {t('logout')}
+      </button>
+    </header>
+  )
+}
+
+/** Platform operator: only the verification queue for now. */
+function AdminShell({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
+  const t = useT()
+  return (
+    <div className="app">
+      <TopBar title={t('tab_moderation')} sub={me.name} onSignOut={onSignOut} />
+      <main>
+        <Moderation />
+      </main>
+    </div>
+  )
+}
+
+function Shell({ me, onSignOut, onOrgChanged }: { me: Me; onSignOut: () => void; onOrgChanged: () => Promise<void> }) {
+  const t = useT()
   const membership = me.memberships[0]
   const org = membership?.organization
   const isBuyer = org?.kind === 'buyer'
+  const { pathname } = useLocation()
+  const pendingSeller = org?.kind === 'seller' && org.status === 'pending' && pathname !== '/company'
+  const awaitingReview = org?.verification_status === 'pending'
   return (
     <CartProvider enabled={isBuyer}>
       <Frame isBuyer={isBuyer}>
-        <header className="topbar">
-          <div className="brand">QB</div>
-          <div className="who">
-            <span>{org?.display_name ?? me.name}</span>
-            <small>{me.name}</small>
-          </div>
-          <LangSwitch />
-          <button
-            className="link"
-            onClick={() => {
-              onSignOut()
-              navigate('/')
-            }}
-          >
-            {t('logout')}
-          </button>
-        </header>
+        <TopBar title={org?.display_name ?? me.name} sub={me.name} onSignOut={onSignOut} />
         <main>
+          {pendingSeller && (
+            <Link to="/company" className="next" style={{ marginBottom: 12, textDecoration: 'none' }}>
+              <strong>{awaitingReview ? t('pending_seller_banner') : t('upload_to_sell')}</strong>
+              <span className="clock">→</span>
+            </Link>
+          )}
           <Routes>
+            <Route path="/company" element={<Company onChanged={onOrgChanged} />} />
             {isBuyer ? (
               <>
-                <Route path="/" element={<Catalog canBuy />} />
+                <Route path="/" element={<Catalog canBuy firstName={me.name.split(' ')[0]} />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/orders" element={<Orders />} />
               </>
@@ -171,12 +218,12 @@ function CartBar() {
 
 function Tab({ to, icon, label, badge }: { to: string; icon: () => React.ReactNode; label: string; badge?: number }) {
   return (
-    <NavLink to={to} end={to === '/'}>
+    <NavLink to={to} end={to === '/'} aria-label={label} title={label}>
       <span className="tab-icon">
         {icon()}
         {badge ? <span className="dot">{badge}</span> : null}
       </span>
-      {label}
+      <span className="tab-label">{label}</span>
     </NavLink>
   )
 }
@@ -189,6 +236,7 @@ function TabBar({ isBuyer }: { isBuyer: boolean }) {
         <Tab to="/" icon={Icon.inbox} label={t('tab_inbox')} />
         <Tab to="/orders" icon={Icon.ticket} label={t('tab_orders')} />
         <Tab to="/catalog" icon={Icon.catalog} label={t('tab_catalog')} />
+        <Tab to="/company" icon={Icon.company} label={t('tab_company')} />
       </nav>
     )
   }
@@ -203,6 +251,7 @@ function BuyerTabs() {
       <Tab to="/" icon={Icon.catalog} label={t('tab_catalog')} />
       <Tab to="/cart" icon={Icon.cart} label={t('tab_cart')} badge={count} />
       <Tab to="/orders" icon={Icon.ticket} label={t('tab_orders')} />
+      <Tab to="/company" icon={Icon.company} label={t('tab_company')} />
     </nav>
   )
 }

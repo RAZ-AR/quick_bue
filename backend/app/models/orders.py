@@ -160,6 +160,7 @@ class OrderLine(UUIDPk, Timestamped, Base):
     final_price_amd: Mapped[int | None] = mapped_column(Amd)
     price_source: Mapped[PriceSource] = mapped_column(str_enum(PriceSource), default=PriceSource.list)
     line_total_amd: Mapped[int | None] = mapped_column(Amd)
+    vat_rate_bp: Mapped[int] = mapped_column(Integer, default=0)  # snapshot; 0 = seller not a VAT payer
 
     order: Mapped[Order] = relationship(back_populates="lines")
 

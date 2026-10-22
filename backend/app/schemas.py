@@ -5,6 +5,10 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 
 from app.models import (
+    DocumentKind,
+    DocumentStatus,
+    FileKind,
+    FileStatus,
     LineDecision,
     Locale,
     NegotiationScope,
@@ -13,11 +17,15 @@ from app.models import (
     OfferResponse,
     OrderStatus,
     OrgKind,
+    OrgStatus,
     PaymentStatus,
     PriceSource,
     Role,
     Side,
+    TaxRegime,
     Unit,
+    VenueType,
+    VerificationStatus,
 )
 
 
@@ -38,6 +46,8 @@ class OrgOut(ORM):
     id: uuid.UUID
     kind: OrgKind
     display_name: str
+    status: OrgStatus
+    verification_status: VerificationStatus
 
 
 class MembershipOut(ORM):
@@ -304,3 +314,120 @@ class AgreementOut(ORM):
     price_amd: int
     valid_from: date
     valid_until: date
+
+
+# --- onboarding, verification, documents ------------------------------------------------------------------
+
+
+class DevRegisterIn(BaseModel):
+    name: str
+    email: str
+
+
+class CompanyOut(BaseModel):
+    tin: str
+    legal_name: str
+    registration_number: str | None
+    legal_address: str | None
+    director_name: str | None
+    tax_regime: TaxRegime | None
+    active: bool
+
+
+class LookupOut(BaseModel):
+    tin: str
+    found: bool
+    already_registered: bool
+    provider: str  # "demo" means fictional data
+    company: CompanyOut | None
+
+
+class NewOrgIn(BaseModel):
+    kind: OrgKind
+    tin: str
+    legal_name: str
+    display_name: str = ""
+    tax_regime: TaxRegime | None = None
+    registration_number: str | None = None
+    legal_address: str | None = None
+    director_name: str | None = None
+    bank_name: str | None = None
+    bank_account: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    venue_type: VenueType | None = None
+    delivery_address: str | None = None
+    district: str | None = None
+
+
+class OrgDetailOut(ORM):
+    id: uuid.UUID
+    kind: OrgKind
+    status: OrgStatus
+    legal_name: str
+    display_name: str
+    tin: str | None
+    tax_regime: TaxRegime | None
+    registration_number: str | None
+    legal_address: str | None
+    director_name: str | None
+    bank_name: str | None
+    bank_account: str | None
+    phone: str | None
+    email: str | None
+    venue_type: VenueType | None
+    registry_source: str | None
+    verification_status: VerificationStatus
+    verified_at: datetime | None
+    review_note: str | None
+
+
+class RequisitesIn(BaseModel):
+    display_name: str | None = None
+    legal_address: str | None = None
+    director_name: str | None = None
+    bank_name: str | None = None
+    bank_account: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    registration_number: str | None = None
+    tax_regime: TaxRegime | None = None
+
+
+class OrgFileOut(ORM):
+    id: uuid.UUID
+    kind: FileKind
+    file_name: str
+    content_type: str
+    size_bytes: int
+    status: FileStatus
+    expires_on: date | None
+    review_note: str | None
+    created_at: datetime
+
+
+class VerificationOut(BaseModel):
+    organization: OrgDetailOut
+    required: list[FileKind]
+    recommended: list[FileKind]
+    files: list[OrgFileOut]
+
+
+class ReviewIn(BaseModel):
+    approve: bool
+    note: str | None = None
+
+
+class DocumentOut(ORM):
+    id: uuid.UUID
+    kind: DocumentKind
+    number: str | None
+    external_id: str | None
+    status: DocumentStatus
+    issued_at: datetime | None
+    payload: dict | None
+
+
+class SrcNumberIn(BaseModel):
+    kind: DocumentKind
+    number: str

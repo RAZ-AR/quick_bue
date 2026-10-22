@@ -28,6 +28,13 @@ export const Icon = {
       <path d="M9 8h6M9 12h6M9 16h3" />
     </svg>
   ),
+  // a building: the company profile
+  company: () => (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M4 20V6l8-3v17M12 9h8v11M4 20h17" />
+      <path d="M7.5 9h1M7.5 12.5h1M7.5 16h1M15.5 12.5h1M15.5 16h1" />
+    </svg>
+  ),
   inbox: () => (
     <svg viewBox="0 0 24 24" {...stroke}>
       <path d="M4 13l2.5-8h11L20 13v6H4z" />

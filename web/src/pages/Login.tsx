@@ -1,7 +1,8 @@
+import type React from 'react'
 import { useEffect, useState } from 'react'
 import { LangSwitch } from '../App'
-import { useT } from '../i18n'
-import { api, token, type PublicConfig } from '../lib/api'
+import { problemText, useLang, useT } from '../i18n'
+import { api, ApiError, token, type PublicConfig } from '../lib/api'
 
 // Seeded by `python -m app.seed` (backend/app/seed.py)
 const DEMO_USERS: { group: 'buyers' | 'sellers' | 'platform'; email: string; label: string }[] = [
@@ -16,12 +17,28 @@ const DEMO_USERS: { group: 'buyers' | 'sellers' | 'platform'; email: string; lab
 
 export function Login({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
   const t = useT()
+  const lang = useLang()
   const [config, setConfig] = useState<PublicConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     api.config().then(setConfig, (e: Error) => setError(e.message))
   }, [])
+
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+
+  async function register(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    try {
+      const { access_token } = await api.devRegister(name, email)
+      token.set(access_token)
+      await onSignedIn()
+    } catch (err) {
+      setError(problemText((err as ApiError).code, lang))
+    }
+  }
 
   async function signIn(email: string) {
     setError(null)
@@ -67,6 +84,16 @@ export function Login({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
         )}
         {error && <p className="error">{error}</p>}
       </section>
+      {config?.dev_login && (
+        <form className="ticket" style={{ marginTop: 12, display: 'grid', gap: 10 }} onSubmit={register}>
+          <h2 style={{ margin: 0 }}>{t('register')}</h2>
+          <input className="search" style={{ background: 'var(--sunken)', paddingLeft: 18 }} placeholder={t('your_name')}
+            value={name} onChange={(e) => setName(e.target.value)} required />
+          <input className="search" style={{ background: 'var(--sunken)', paddingLeft: 18 }} placeholder={t('email')}
+            type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <button className="btn primary block">{t('register')} →</button>
+        </form>
+      )}
     </div>
   )
 }

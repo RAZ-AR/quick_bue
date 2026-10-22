@@ -45,6 +45,7 @@ export function Orders({ inbox = false }: { inbox?: boolean }) {
 
   return (
     <div className="stack page">
+      <h1 className="page-title">{t('tab_orders')}</h1>
       {sent && <p className="notice">✓ {t('sent')}</p>}
       {items.length === 0 && (
         <div className="empty">
@@ -84,6 +85,9 @@ function OrderCard({ o }: { o: OrderListItem }) {
   return (
     <li>
       <Link to={`/orders/${o.id}`} className={`order-card${urgent ? ' urgent' : o.next_step ? ' need' : ''}`}>
+        <span className="ibtn" aria-hidden>
+          ↗
+        </span>
         <div className="top">
           <strong>{o.counterparty.display_name}</strong>
           <span className="sum num">{amd(o.total_amd)}</span>
@@ -136,12 +140,13 @@ function SellerBoard({ items }: { items: OrderListItem[] }) {
 
   return (
     <div className="stack page" style={{ maxWidth: 1120 }}>
+      <h1 className="page-title">{t('tab_inbox')}</h1>
       <div className="kpis">
         <div className="kpi">
           <b>{todays.length}</b>
           <span>{t('today_orders')}</span>
         </div>
-        <div className="kpi">
+        <div className="kpi dark">
           <b className="num">{amd(todays.reduce((s, o) => s + o.total_amd, 0))}</b>
           <span>{t('turnover')}</span>
         </div>

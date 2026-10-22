@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, cart, catalog, orders
+from app.api import auth, cart, catalog, onboarding, orders
 from app.config import get_settings
 from app.platform.errors import DomainError
 
@@ -20,6 +20,7 @@ def create_app() -> FastAPI:
     app.include_router(catalog.router)
     app.include_router(cart.router)
     app.include_router(orders.router)
+    app.include_router(onboarding.router)
 
     @app.exception_handler(DomainError)
     async def domain_error(_: Request, exc: DomainError) -> JSONResponse:
