@@ -280,6 +280,13 @@ export const TEXTS = {
   dev_code: { hy: 'Թեստային կոդ', ru: 'Тестовый код (письма не отправляются)', en: 'Test code (no e-mails sent)' },
   change_email: { hy: 'Փոխել էլ. փոստը', ru: 'Другая почта', en: 'Change e-mail' },
   or_continue: { hy: 'կամ', ru: 'или войдите через', en: 'or continue with' },
+  demo_tab: { hy: 'Դեմո', ru: 'Демо', en: 'Demo' },
+  sign_in_as: { hy: 'Մուտք որպես', ru: 'Войти как', en: 'Sign in as' },
+  demo_hint: {
+    hy: 'Հորինված ընկերություններ՝ բոլոր դերերը փորձելու համար։ Օպերատորին վերադառնալու համար դուրս եկեք և մուտք գործեք կոդով։',
+    ru: 'Вымышленные компании, чтобы попробовать все роли. Вернуться в оператора: выйти и войти по коду.',
+    en: 'Fictional companies to try every role. To return to the operator, sign out and sign in with a code.',
+  },
   demo_users: { hy: 'Դեմո օգտատերեր', ru: 'Демо-пользователи', en: 'Demo users' },
 
   // seller cabinet

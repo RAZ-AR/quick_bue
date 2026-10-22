@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FILE_KINDS, FILE_STATUS, problemText, useLang, useT, VERIFICATION } from '../i18n'
-import { api, ApiError, openFile, type Verification, type VerificationStatus } from '../lib/api'
+import { api, ApiError, openFile, type DemoUser, type Verification, type VerificationStatus } from '../lib/api'
 import { dateTime } from '../lib/format'
+import { useSession } from '../lib/session'
 
 const TABS: VerificationStatus[] = ['pending', 'rejected', 'verified']
 
@@ -9,12 +11,15 @@ const TABS: VerificationStatus[] = ['pending', 'rejected', 'verified']
 export function Moderation() {
   const t = useT()
   const lang = useLang()
-  const [tab, setTab] = useState<VerificationStatus>('pending')
+  const [tab, setTab] = useState<VerificationStatus | 'demo'>('pending')
   const [items, setItems] = useState<Verification[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(
-    () => api.adminQueue([tab]).then(setItems, (e: ApiError) => setError(problemText(e.code, lang))),
+    async () =>
+      tab === 'demo'
+        ? undefined
+        : api.adminQueue([tab]).then(setItems, (e: ApiError) => setError(problemText(e.code, lang))),
     [tab, lang],
   )
   useEffect(() => {
@@ -30,10 +35,19 @@ export function Moderation() {
             {VERIFICATION[s][lang]}
           </button>
         ))}
+        <button className={tab === 'demo' ? 'chip on' : 'chip'} onClick={() => setTab('demo')}>
+          ▶ {t('demo_tab')}
+        </button>
       </div>
-      {error && <p className="error">{error}</p>}
-      {items?.length === 0 && <p className="col-empty">{t('queue_empty')}</p>}
-      {items?.map((v) => <CompanyCard key={v.organization.id} v={v} reload={load} />)}
+      {tab === 'demo' ? (
+        <DemoUsers />
+      ) : (
+        <>
+          {error && <p className="error">{error}</p>}
+          {items?.length === 0 && <p className="col-empty">{t('queue_empty')}</p>}
+          {items?.map((v) => <CompanyCard key={v.organization.id} v={v} reload={load} />)}
+        </>
+      )}
     </div>
   )
 }
@@ -130,5 +144,111 @@ function CompanyCard({ v, reload }: { v: Verification; reload: () => Promise<voi
         </div>
       )}
     </section>
+  )
+}
+
+/** What each seeded person is good for (app/seed.py, app/demo.py). */
+const DEMO_STORY: Record<string, Record<'hy' | 'ru' | 'en', string>> = {
+  'arax@qb.local': {
+    hy: 'Սրճարանի սեփականատեր․ կատալոգ, զամբյուղ, սակարկություն, պատվերներ',
+    ru: 'Владелец кафе: каталог, корзина, торг. Ждёт ответа на встречную цену, есть оплаченный заказ',
+    en: 'Cafe owner: catalog, cart, haggling. A counter-offer awaits an answer; one order is paid',
+  },
+  'chef@qb.local': {
+    hy: 'Խոհարար․ պատվիրում է առանց սակարկելու, սահմանաչափ 50 000 ֏',
+    ru: 'Шеф того же кафе: заказывает без торга, лимит заказа 50 000 ֏',
+    en: 'Chef at the same cafe: orders without haggling, 50 000 ֏ limit',
+  },
+  'nova@qb.local': {
+    hy: 'Բարի սեփականատեր․ պատվերը ճանապարհին է, առաջարկը սպասում է վաճառողին',
+    ru: 'Владелец бара: заказ в пути, своё предложение цены ждёт продавца',
+    en: 'Bar owner: an order on its way, a price offer waiting for the seller',
+  },
+  'lori@qb.local': {
+    hy: 'Պանրի արտադրող․ պետք է պատասխանել գնի առաջարկին, ավտոպիլոտ',
+    ru: 'Сыроварня: нужно ответить на предложение цены, автопилот торга, свои клиенты',
+    en: 'Cheese maker: a price offer to answer, haggling autopilot, own clients',
+  },
+  'manager@qb.local': {
+    hy: 'Նույն պանրագործարանի մենեջեր (առանց սեփականատիրոջ իրավունքների)',
+    ru: 'Менеджер той же сыроварни: работает с заказами, без прав владельца',
+    en: 'Manager at the same cheese maker: handles orders, no owner rights',
+  },
+  'pack@qb.local': {
+    hy: 'Մեծածախ մատակարար․ նոր պատվեր հացատնից, մեկը ճանապարհին',
+    ru: 'Оптовик расходников: новый заказ от пекарни, один заказ в пути',
+    en: 'Wholesaler: a new order from the bakery, one on its way',
+  },
+  'farm@qb.local': {
+    hy: 'Ֆերմա․ բանջարեղեն, պատվերներ դեռ չկան',
+    ru: 'Ферма: овощи и зелень, заказов пока нет',
+    en: 'Farm: vegetables and greens, no orders yet',
+  },
+  'baker@qb.local': {
+    hy: 'Հացատուն, որը և՛ գնում է, և՛ վաճառում․ փորձեք «Գնում եմ / Վաճառում եմ»',
+    ru: 'Пекарня, которая и покупает, и продаёт: переключатель «Покупаю / Продаю»',
+    en: 'Bakery that both buys and sells: try the Buying / Selling switch',
+  },
+  'honey@qb.local': {
+    hy: 'Նոր վաճառող, սպասում է ստուգման․ ապրանքները կատալոգում չեն',
+    ru: 'Новый продавец ждёт проверки: товары не видны в каталоге, есть в очереди модерации',
+    en: 'New seller waiting for review: products hidden, in the moderation queue',
+  },
+  'newbie@qb.local': {
+    hy: 'Մուտք է գործել, ընկերություն չկա․ գրանցում ՀՎՀՀ-ով',
+    ru: 'Вошёл, но компании нет: регистрация по ИНН',
+    en: 'Signed in, no company yet: sign-up by TIN',
+  },
+  'admin@qb.local': { hy: 'Դեմո օպերատոր', ru: 'Демо-оператор', en: 'Demo operator' },
+}
+
+function DemoUsers() {
+  const t = useT()
+  const lang = useLang()
+  const navigate = useNavigate()
+  const { signIn } = useSession()
+  const [users, setUsers] = useState<DemoUser[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.demoUsers().then(setUsers, (e: ApiError) => setError(problemText(e.code, lang)))
+  }, [lang])
+
+  async function enter(u: DemoUser) {
+    try {
+      const { access_token } = await api.demoUserToken(u.id)
+      await signIn(access_token)
+      navigate('/', { replace: true })
+    } catch (e) {
+      setError(problemText((e as ApiError).code, lang))
+    }
+  }
+
+  return (
+    <>
+      <p className="muted small" style={{ margin: '0 4px' }}>
+        {t('demo_hint')}
+      </p>
+      {error && <p className="error">{error}</p>}
+      {users?.length === 0 && <p className="col-empty">{t('queue_empty')}</p>}
+      <ul className="demo-users">
+        {users?.map((u) => (
+          <li key={u.id}>
+            <button onClick={() => void enter(u)} title={`${t('sign_in_as')} ${u.email}`}>
+              <span style={{ display: 'grid', gap: 2, textAlign: 'left' }}>
+                <span>
+                  {u.company ?? u.name}
+                  {u.roles.length > 0 && (
+                    <small> · {u.roles.map((r) => (r === 'buyer' ? t('role_buyer') : t('role_seller'))).join(' + ')}</small>
+                  )}
+                </span>
+                <small>{DEMO_STORY[u.email]?.[lang] ?? u.name}</small>
+              </span>
+              <small>{u.email.replace('@qb.local', '')}</small>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }

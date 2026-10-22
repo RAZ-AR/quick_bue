@@ -116,3 +116,10 @@ docker compose -f docker-compose.prod.yml ps                             # со�
 - Код копируется на сервер `rsync` с компьютера, без git: `rsync -az -e "ssh -i ~/.ssh/qb_oracle" --exclude .git --exclude .env
   --exclude node_modules --exclude dist ./ ubuntu@<IP>:qb/` и затем `up -d --build` на сервере.
 - Пока `MAIL_PROVIDER=console`, код входа пишется в лог: `docker compose -f docker-compose.prod.yml logs api | tail`.
+
+## 9. Демо-данные на сервере
+
+`docker compose -f docker-compose.prod.yml run --rm api python -m app.demo` — вымышленные компании `*@qb.local`
+и 6 заказов в разных состояниях. Войти под ними: оператор → «Модерация» → вкладка **▶ Демо** → «Войти как».
+Вход возможен только в демо-пользователей (`@qb.local`) и только для оператора. Вернуться: выйти и войти по коду.
+Перед запуском с настоящими клиентами демо-компании нужно удалить (или заблокировать), иначе их товары видны в каталоге.

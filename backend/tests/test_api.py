@@ -40,7 +40,7 @@ async def test_categories(client, seeded):
 async def test_products_list_has_seller_and_tiers(client, seeded):
     headers = await login(client, "arax@qb.local")
     page = (await client.get("/products", headers=headers, params={"limit": 100})).json()
-    assert page["total"] == 13
+    assert page["total"] == 15  # Dilijan Honey is not verified: hidden
     cheese = next(p for p in page["items"] if p["name"]["en"] == "Lori cheese")
     assert cheese["seller"]["display_name"] == "Լոռի Պանիր"
     assert cheese["base_price_amd"] == 3500
@@ -63,14 +63,14 @@ async def test_search_in_three_scripts(client, seeded):
 async def test_products_filters(client, seeded, sessionmaker):
     headers = await login(client, "arax@qb.local")
     page = (await client.get("/products", headers=headers, params={"offers_only": True})).json()
-    assert all(p["allow_offers"] for p in page["items"]) and page["total"] == 5
+    assert all(p["allow_offers"] for p in page["items"]) and page["total"] == 6
 
     async with sessionmaker() as s:
         farm = await s.scalar(select(Organization).where(Organization.display_name == "Green Valley"))
         farm.status = "blocked"
         await s.commit()
     page = (await client.get("/products", headers=headers, params={"limit": 100})).json()
-    assert page["total"] == 9  # blocked seller's products are hidden
+    assert page["total"] == 11  # blocked seller's products are hidden
 
 
 async def test_order_numbers_come_from_sequence(sessionmaker, seeded):

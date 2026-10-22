@@ -92,7 +92,7 @@ async def test_seller_signs_up_gets_verified_and_trades(client):
 
     admin = await login(client, "admin@qb.local")
     queue = (await client.get("/admin/verification", headers=admin)).json()
-    assert [q["organization"]["display_name"] for q in queue] == ["Sevan Fish"]
+    assert [q["organization"]["display_name"] for q in queue] == ["Dilijan Honey", "Sevan Fish"]
     # Approving the company needs the registration extract approved first
     r = await client.post(f"/admin/organizations/{org['id']}/review", headers=admin, json={"approve": True})
     assert r.status_code == 422

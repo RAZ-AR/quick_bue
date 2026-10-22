@@ -38,6 +38,7 @@
 cp .env.example .env
 docker compose up -d --build                     # всё; api сам применяет миграции
 docker compose run --rm api python -m app.seed   # демо-данные (вход: DEV_LOGIN, *@qb.local)
+docker compose run --rm api python -m app.demo   # демо-данные + 6 заказов в разных состояниях
 
 # тесты и линтер бэкенда (база qb_test в том же контейнере db)
 docker compose run --rm -v "$PWD/backend:/app" -e TEST_DATABASE_URL=postgresql+asyncpg://qb:qb@db:5432/qb_test api pytest -q
@@ -77,7 +78,8 @@ backend/app/
 ├── workers/       # outbox-диспетчер (пока только лог), очередь RQ "qb"
 ├── bot/           # Telegram-бот (пока только /start)
 ├── scheduler.py   # истечение торгов, автоприёмка 48 ч, истечение контрактов, outbox каждые 2 с
-└── seed.py        # демо-данные: 3 продавца, 2 заведения, 13 товаров
+├── seed.py        # демо-данные: 5 продавцов (один не проверен, одна пекарня ещё и покупает), 3 покупателя
+└── demo.py        # seed + заказы через API: торг, в пути, оплачен; на сервере — вместо seed
 ```
 
 ## Правила

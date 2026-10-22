@@ -73,7 +73,7 @@ async def test_google_and_telegram_need_keys(client):
 async def test_guest_sees_products_without_sellers(client):
     assert (await client.get("/categories")).status_code == 200
     page = (await client.get("/products", params={"limit": 100})).json()
-    assert page["guest"] is True and page["total"] == 13
+    assert page["guest"] is True and page["total"] == 15
     assert all(p["seller"] is None for p in page["items"])
     # Signed-in users see the seller
     arax = await login(client, "arax@qb.local")
@@ -208,3 +208,41 @@ async def test_other_sellers_products_are_not_editable(client):
     lori, pack = await login(client, "lori@qb.local"), await login(client, "pack@qb.local")
     p = (await client.post("/seller/products", headers=lori, json=PRODUCT)).json()
     assert (await client.put(f"/seller/products/{p['id']}", headers=pack, json=PRODUCT)).status_code == 404
+
+
+# --- operator: sign in as a demo user -----------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("seeded")
+async def test_operator_can_sign_in_as_demo_user_only(client):
+    admin = await login(client, "admin@qb.local")
+    users = (await client.get("/admin/demo-users", headers=admin)).json()
+    emails = {u["email"] for u in users}
+    assert {"arax@qb.local", "baker@qb.local", "newbie@qb.local", "manager@qb.local"} <= emails
+    baker = next(u for u in users if u["email"] == "baker@qb.local")
+    assert (baker["roles"], baker["role"]) == (["buyer", "seller"], "owner")
+
+    r = await client.post(f"/admin/demo-users/{baker['id']}/token", headers=admin)
+    assert r.status_code == 200
+    me = (await client.get("/me", headers={"Authorization": f"Bearer {r.json()['access_token']}"})).json()
+    assert me["email"] == "baker@qb.local"
+
+    # Buyers cannot use it
+    arax = await login(client, "arax@qb.local")
+    assert (await client.get("/admin/demo-users", headers=arax)).status_code == 403
+    assert (await client.post(f"/admin/demo-users/{baker['id']}/token", headers=arax)).status_code == 403
+
+
+async def test_operator_cannot_sign_in_as_real_user(client, sessionmaker):
+    from app.models import User
+
+    async with sessionmaker() as s:
+        admin = User(name="Op", email="op@example.com", is_platform_admin=True)
+        real = User(name="Real", email="real@example.com")
+        s.add_all([admin, real])
+        await s.commit()
+        real_id = real.id
+    from app.auth.tokens import issue_token
+
+    h = {"Authorization": f"Bearer {issue_token(admin.id)}"}
+    assert (await client.post(f"/admin/demo-users/{real_id}/token", headers=h)).status_code == 404

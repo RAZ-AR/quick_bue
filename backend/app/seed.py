@@ -61,25 +61,27 @@ async def seed() -> None:
             print("demo data already present")
             return
 
-        cats = {}
+        cats = {c.slug: c for c in (await s.scalars(select(Category))).all()}
         for i, (slug, name, bp) in enumerate(CATEGORIES):
-            cats[slug] = Category(slug=slug, name=name, sort=i, default_commission_bp=bp)
-        s.add_all(cats.values())
+            if slug not in cats:
+                cats[slug] = Category(slug=slug, name=name, sort=i, default_commission_bp=bp)
+                s.add(cats[slug])
 
         # Commission defaults (docs/01 §6): 0% for the seller's own clients, category rate otherwise
-        s.add_all(
-            [
-                CommissionRule(
-                    client_source=ClientSource.seller_invited, rate_bp=0, valid_from=date(2026, 1, 1)
-                ),
-                CommissionRule(
-                    client_source=ClientSource.platform,
-                    rate_bp=500,
-                    first_order_bonus_bp=250,
-                    valid_from=date(2026, 1, 1),
-                ),
-            ]
-        )
+        if not await s.scalar(select(CommissionRule.id).limit(1)):
+            s.add_all(
+                [
+                    CommissionRule(
+                        client_source=ClientSource.seller_invited, rate_bp=0, valid_from=date(2026, 1, 1)
+                    ),
+                    CommissionRule(
+                        client_source=ClientSource.platform,
+                        rate_bp=500,
+                        first_order_bonus_bp=250,
+                        valid_from=date(2026, 1, 1),
+                    ),
+                ]
+            )
 
         admin = User(name="QB Operator", email="admin@qb.local", locale=Locale.ru, is_platform_admin=True)
         s.add(admin)
@@ -345,8 +347,81 @@ async def seed() -> None:
                 ClientLink(seller_id=pack.id, buyer_id=nova.id, source=ClientSource.platform),
             ]
         )
+
+        # --- more roles to try ---
+        manager = User(name="Maria (manager, Lori)", email="manager@qb.local", locale=Locale.ru)
+        baker = User(name="Hasmik (Ararat Bakery)", email="baker@qb.local", locale=Locale.hy)
+        honey = User(name="Tigran (Dilijan Honey)", email="honey@qb.local", locale=Locale.ru)
+        newbie = User(name="New user (no company yet)", email="newbie@qb.local", locale=Locale.en)
+        s.add_all([manager, baker, honey, newbie])
+        # One company that both buys (flour) and sells (bread): the Buy / Sell switch shows up for it
+        bakery = Organization(
+            is_buyer=True,
+            is_seller=True,
+            legal_name="Ararat Bakery LLC",
+            display_name="Ararat Bakery",
+            tin="00000021",
+            tax_regime=TaxRegime.turnover,
+            venue_type=VenueType.bakery,
+            legal_address="Yerevan, Mashtots Ave 20",
+            director_name="Hasmik Grigoryan",
+            bank_name="Inecobank",
+            bank_account="2050011122230100",
+            verification_status=VerificationStatus.verified,
+            registry_source="demo",
+        )
+        # A seller that has registered but is not verified yet: its products stay hidden from the catalog
+        honey_org = Organization(
+            is_seller=True,
+            legal_name="Dilijan Honey LLC",
+            display_name="Dilijan Honey",
+            tin="00000022",
+            tax_regime=TaxRegime.micro,
+            legal_address="Tavush, Dilijan, Myasnikyan St 3",
+            director_name="Tigran Avagyan",
+            verification_status=VerificationStatus.pending,
+            registry_source="demo",
+        )
+        s.add_all([bakery, honey_org])
+        await s.flush()
+        s.add_all(
+            [
+                Membership(user_id=manager.id, organization_id=lori.id, role=Role.manager),
+                Membership(user_id=baker.id, organization_id=bakery.id, role=Role.owner),
+                Membership(user_id=honey.id, organization_id=honey_org.id, role=Role.owner),
+                Address(
+                    organization_id=bakery.id, label="Bakery", text="Mashtots Ave 20", district="Kentron"
+                ),
+                SellerProfile(
+                    organization_id=bakery.id,
+                    min_order_amd=8_000,
+                    cutoff_time=time(18, 0),
+                    lead_days=1,
+                    delivery_fee_amd=500,
+                    free_delivery_from_amd=30_000,
+                ),
+                SellerProfile(organization_id=honey_org.id, min_order_amd=15_000, lead_days=2),
+            ]
+        )
+        s.add_all(DeliveryZone(seller_id=bakery.id, district=d) for d in DISTRICTS[:3])
+        product(bakery, "bakery", _name("Լավաշ", "Лаваш", "Lavash"), Unit.pack, 1_200, min_qty=10, step=5)
+        product(
+            bakery,
+            "bakery",
+            _name("Թարմ հաց", "Свежий хлеб", "Fresh bread"),
+            Unit.pcs,
+            350,
+            min_qty=20,
+            step=10,
+            offers=True,
+            tiers=[(100, 320)],
+        )
+        product(honey_org, "grocery", _name("Մեղր", "Мёд горный", "Mountain honey"), Unit.kg, 6_800)
         await s.commit()
-        print("demo data created: admin@, lori@, pack@, farm@, arax@, chef@, nova@ (all @qb.local)")
+        print(
+            "demo data created (all @qb.local): admin, lori, manager, pack, farm, arax, chef, nova, baker, "
+            "honey, newbie"
+        )
 
 
 if __name__ == "__main__":

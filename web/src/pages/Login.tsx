@@ -13,6 +13,10 @@ const DEMO_USERS: { group: 'buyers' | 'sellers' | 'platform'; email: string; lab
   { group: 'sellers', email: 'lori@qb.local', label: 'Լոռի Պանիր — seller' },
   { group: 'sellers', email: 'pack@qb.local', label: 'Yerevan Pack — seller' },
   { group: 'sellers', email: 'farm@qb.local', label: 'Green Valley — seller' },
+  { group: 'sellers', email: 'manager@qb.local', label: 'Լոռի Պանիր — manager' },
+  { group: 'sellers', email: 'baker@qb.local', label: 'Ararat Bakery — buys and sells' },
+  { group: 'sellers', email: 'honey@qb.local', label: 'Dilijan Honey — not verified yet' },
+  { group: 'platform', email: 'newbie@qb.local', label: 'No company yet' },
   { group: 'platform', email: 'admin@qb.local', label: 'QB operator' },
 ]
 

@@ -29,6 +29,9 @@ export interface Product {
   tiers: { min_qty: string; price_amd: number }[]
 }
 export interface ProductPage { items: Product[]; total: number; guest?: boolean }
+export interface DemoUser {
+  id: string; name: string; email: string; company: string | null; roles: Mode[]; role: string | null
+}
 export interface PublicConfig {
   dev_login: boolean; email_login: boolean; google_client_id: string | null; telegram_bot_username: string | null
 }
@@ -282,6 +285,8 @@ export const api = {
   submitVerification: () => post<Verification>('/verification/submit'),
   adminQueue: (status: VerificationStatus[] = ['pending']) =>
     request<Verification[]>(`/admin/verification?${status.map((s) => `status=${s}`).join('&')}`),
+  demoUsers: () => request<DemoUser[]>('/admin/demo-users'),
+  demoUserToken: (id: string) => post<{ access_token: string }>(`/admin/demo-users/${id}/token`),
   reviewFile: (id: string, approve: boolean, note?: string) => post<OrgFile>(`/admin/files/${id}/review`, { approve, note }),
   reviewOrg: (id: string, approve: boolean, note?: string) =>
     post<OrgDetail>(`/admin/organizations/${id}/review`, { approve, note }),
