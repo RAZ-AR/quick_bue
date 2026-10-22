@@ -87,6 +87,9 @@ class User(UUIDPk, Timestamped, Base):
     telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True)
     locale: Mapped[Locale] = mapped_column(str_enum(Locale), default=Locale.hy)
     is_platform_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Copies of in-app notifications; Telegram also needs telegram_id (linked through the bot)
+    notify_email: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    notify_telegram: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="user")
 

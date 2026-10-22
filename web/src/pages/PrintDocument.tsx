@@ -65,7 +65,56 @@ export function PrintDocument() {
 
   if (error) return <p className="error" style={{ padding: 24 }}>{error}</p>
   if (!doc?.payload) return <p style={{ padding: 24 }}>…</p>
-  const p = doc.payload
+  return (
+    <div className="print-wrap">
+      <PrintBar lang={lang} />
+      <Sheet doc={doc} lang={lang} />
+    </div>
+  )
+}
+
+/** Several documents in one print job (from the Documents page): each starts on a new page. */
+export function PrintBatch() {
+  const lang = useLang()
+  const [docs, setDocs] = useState<QDocument[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const ids = new URLSearchParams(window.location.search).get('ids') ?? ''
+
+  useEffect(() => {
+    const list = ids.split(',').filter(Boolean).slice(0, 100)
+    Promise.all(list.map((id) => api.document(id))).then(setDocs, (e: Error) => setError(e.message))
+  }, [ids])
+
+  useEffect(() => {
+    document.title = 'QB — documents'
+  }, [])
+
+  if (error) return <p className="error" style={{ padding: 24 }}>{error}</p>
+  if (!docs) return <p style={{ padding: 24 }}>…</p>
+  return (
+    <div className="print-wrap">
+      <PrintBar lang={lang} />
+      {docs
+        .filter((d) => d.payload)
+        .map((d) => (
+          <Sheet key={d.id} doc={d} lang={lang} />
+        ))}
+    </div>
+  )
+}
+
+function PrintBar({ lang }: { lang: Lang }) {
+  return (
+    <div className="no-print print-bar">
+      <button className="btn primary" onClick={() => window.print()}>
+        {L.print[lang]}
+      </button>
+    </div>
+  )
+}
+
+function Sheet({ doc, lang }: { doc: QDocument; lang: Lang }) {
+  const p = doc.payload!
   // Label: Armenian first, the reader's language under it (once, if it differs)
   const lb = (k: string) => (
     <>
@@ -75,12 +124,6 @@ export function PrintDocument() {
   )
 
   return (
-    <div className="print-wrap">
-      <div className="no-print print-bar">
-        <button className="btn primary" onClick={() => window.print()}>
-          {L.print[lang]}
-        </button>
-      </div>
       <article className="a4">
         <header className="a4-head">
           <div>
@@ -173,7 +216,6 @@ export function PrintDocument() {
         )}
         <footer className="a4-foot">{L.footer.hy}{lang !== 'hy' && <> · {L.footer[lang]}</>}</footer>
       </article>
-    </div>
   )
 }
 

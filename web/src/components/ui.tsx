@@ -46,6 +46,16 @@ export const Icon = {
       <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10" />
     </svg>
   ),
+  bell: () => (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  ),
+  doc: () => (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5" />
+    </svg>
+  ),
   truck: () => (
     <svg viewBox="0 0 24 24" {...stroke}>
       <path d="M3 6h11v10H3zM14 9h4l3 3v4h-7" />

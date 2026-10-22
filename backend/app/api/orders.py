@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Header, Query
@@ -12,6 +12,7 @@ from app.domain.orders import FINAL, By, OrderAction, allowed_actions
 from app.domain.pricing import line_total_amd
 from app.models import (
     Address,
+    DocumentKind,
     Negotiation,
     NegotiationStatus,
     Order,
@@ -23,7 +24,7 @@ from app.models import (
 )
 from app.platform import idempotency
 from app.platform.authz import Actor
-from app.platform.clock import utcnow
+from app.platform.clock import YEREVAN, utcnow
 from app.platform.errors import NotFound
 from app.schemas import (
     AcceptIn,
@@ -32,7 +33,11 @@ from app.schemas import (
     AgreementOut,
     ConfirmIn,
     DocumentOut,
+    DocumentPage,
+    DocumentRow,
     EventOut,
+    MessageIn,
+    MessageOut,
     NegotiationOut,
     OfferOut,
     OrderLineOut,
@@ -45,8 +50,10 @@ from app.schemas import (
     SrcNumberIn,
 )
 from app.services import agreements as agreement_svc
+from app.services import chat as chat_svc
 from app.services import documents as doc_svc
 from app.services import negotiation as nego_svc
+from app.services import notifications as notification_svc
 from app.services import orders as order_svc
 
 router = APIRouter(tags=["orders"])
@@ -171,6 +178,7 @@ async def order_out(session: Session, actor: Actor, order: Order) -> OrderOut:
         address=AddressOut.model_validate(address) if address else None,
         next_step=step,
         deadline=deadline,
+        unread_messages=await notification_svc.unread_messages(session, actor.user, order),
         saving_amd=_saving(order),
         events=[EventOut(type=e.type, at=e.at, auto=bool((e.payload or {}).get("auto"))) for e in events],
     )
@@ -309,6 +317,68 @@ async def record_src_number(order_id: uuid.UUID, body: SrcNumberIn, session: Ses
     doc = await doc_svc.set_src_number(session, actor, order, body.kind, body.number, utcnow())
     await session.commit()
     return doc
+
+
+@router.get("/documents", response_model=DocumentPage)
+async def list_documents(
+    session: Session,
+    actor: CurrentActor,
+    kind: Annotated[list[DocumentKind] | None, Query()] = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> DocumentPage:
+    """The company's documents on the side it acts on now (X-Mode): purchases or sales."""
+
+    def start(d: date | None) -> datetime | None:
+        return datetime.combine(d, time.min, tzinfo=YEREVAN) if d else None
+
+    rows, total = await doc_svc.list_for_org(
+        session,
+        actor,
+        kinds=kind,
+        date_from=start(date_from),
+        date_to=start(date_to + timedelta(days=1)) if date_to else None,
+        q=q,
+        limit=limit,
+        offset=offset,
+    )
+    return DocumentPage(
+        items=[
+            DocumentRow(
+                id=d.id,
+                kind=d.kind,
+                number=d.number,
+                external_id=d.external_id,
+                status=d.status,
+                issued_at=d.issued_at,
+                order_id=o.id,
+                order_number=o.number,
+                order_total_amd=o.total_amd,
+                counterparty=org.display_name,
+            )
+            for d, o, org in rows
+        ],
+        total=total,
+    )
+
+
+@router.get("/orders/{order_id}/messages", response_model=list[MessageOut])
+async def list_messages(order_id: uuid.UUID, session: Session, actor: CurrentActor):
+    rows = await chat_svc.list_messages(session, actor, order_id, utcnow())
+    await session.commit()
+    return [
+        MessageOut.model_validate(m).model_copy(update={"mine": m.user_id == actor.user.id}) for m in rows
+    ]
+
+
+@router.post("/orders/{order_id}/messages", response_model=MessageOut, status_code=201)
+async def post_message(order_id: uuid.UUID, body: MessageIn, session: Session, actor: CurrentActor):
+    msg = await chat_svc.post_message(session, actor, order_id, body.text, utcnow())
+    await session.commit()
+    return MessageOut.model_validate(msg).model_copy(update={"mine": True})
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOut)

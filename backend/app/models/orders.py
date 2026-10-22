@@ -178,6 +178,18 @@ class OrderEvent(UUIDPk, Base):
     payload: Mapped[dict | None] = mapped_column(I18nText)
 
 
+class OrderMessage(UUIDPk, Base):
+    """Chat between the buyer and the seller inside one order."""
+
+    __tablename__ = "order_messages"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    side: Mapped[str] = mapped_column(String(8))  # buyer | seller
+    text: Mapped[str] = mapped_column(Text)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
 class Claim(UUIDPk, Timestamped, Base):
     __tablename__ = "claims"
 

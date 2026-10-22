@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Field, SelectField } from '../components/Field'
 import { FILE_KINDS, FILE_STATUS, problemText, useLang, useT, VERIFICATION } from '../i18n'
 import { api, ApiError, openFile, type FileKind, type OrgDetail, type OrgFile, type TaxRegime, type Verification } from '../lib/api'
@@ -30,6 +31,17 @@ export function Company() {
           {t('tin')}: <span className="num">{org.tin}</span>
         </small>
       </h1>
+      {/* The phone tab bar has no room for these: reach them from the company page */}
+      <nav className="quick-links">
+        <Link to="/documents" className="next calm">
+          <strong>{t('tab_documents')}</strong>
+          <span className="clock">→</span>
+        </Link>
+        <Link to="/notifications" className="next calm">
+          <strong>{t('tab_notifications')}</strong>
+          <span className="clock">→</span>
+        </Link>
+      </nav>
       <VerificationBlock v={v} reload={load} onChanged={onChanged} />
       <Roles org={org} onChanged={async () => (await load(), await onChanged())} />
       <Requisites org={org} onSaved={load} />

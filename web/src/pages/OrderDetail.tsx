@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { OrderConvergence } from '../components/Negotiation'
+import { OrderChat } from '../components/Chat'
 import { OrderDocuments } from '../components/OrderDocuments'
 import { PriceDial } from '../components/PriceDial'
 import { StageRail } from '../components/StageRail'
@@ -184,6 +185,10 @@ export function OrderDetail() {
           )}
         </dl>
       </section>
+
+      <div id="chat">
+        <OrderChat order={order} />
+      </div>
 
       <OrderDocuments order={order} />
 

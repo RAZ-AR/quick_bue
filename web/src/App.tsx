@@ -6,6 +6,7 @@ import { LangContext, useT, type TextKey } from './i18n'
 import type { Lang, Mode } from './lib/api'
 import { CartProvider, useCart } from './lib/cart'
 import { amd } from './lib/format'
+import { NoticesProvider, useNotices } from './lib/notices'
 import { SessionProvider, useSession } from './lib/session'
 import { CartPage } from './pages/Cart'
 import { Catalog } from './pages/Catalog'
@@ -15,7 +16,9 @@ import { Moderation } from './pages/Moderation'
 import { Onboarding } from './pages/Onboarding'
 import { OrderDetail } from './pages/OrderDetail'
 import { Orders } from './pages/Orders'
-import { PrintDocument } from './pages/PrintDocument'
+import { Documents } from './pages/Documents'
+import { Notifications } from './pages/Notifications'
+import { PrintBatch, PrintDocument } from './pages/PrintDocument'
 import { SellerProducts } from './pages/SellerProducts'
 import { SellerSettings } from './pages/SellerSettings'
 
@@ -51,6 +54,7 @@ export function App() {
       <SessionProvider>
         <Routes>
           {/* A4 printout: no app chrome */}
+          <Route path="/print/batch" element={<PrintBatch />} />
           <Route path="/print/:id" element={<PrintDocument />} />
           <Route path="*" element={<Shell />} />
         </Routes>
@@ -66,6 +70,7 @@ interface NavItem {
   label: TextKey
   icon: () => React.ReactNode
   badge?: number
+  desktopOnly?: boolean // kept off the phone tab bar (five round buttons at most)
 }
 
 function useAppState(): State {
@@ -79,9 +84,11 @@ function Shell() {
   const state = useAppState()
   const server = state === 'buyer'
   return (
-    <CartProvider server={server}>
-      <Layout state={state} />
-    </CartProvider>
+    <NoticesProvider enabled={state !== 'guest' && state !== 'admin'}>
+      <CartProvider server={server}>
+        <Layout state={state} />
+      </CartProvider>
+    </NoticesProvider>
   )
 }
 
@@ -103,9 +110,11 @@ function Layout({ state }: { state: State }) {
         </main>
       </div>
       <nav className="tabbar" aria-label="menu">
-        {nav.map((n) => (
-          <Tab key={n.to} {...n} label={t(n.label)} />
-        ))}
+        {nav
+          .filter((n) => !n.desktopOnly)
+          .map((n) => (
+            <Tab key={n.to} {...n} label={t(n.label)} />
+          ))}
       </nav>
       {showCartBar && <CartBar />}
     </div>
@@ -133,6 +142,7 @@ function navFor(state: State, cartCount: number): NavItem[] {
         { to: '/', label: 'tab_catalog', icon: Icon.catalog },
         { to: '/cart', label: 'tab_cart', icon: Icon.cart, badge: cartCount },
         { to: '/orders', label: 'tab_orders', icon: Icon.ticket },
+        { to: '/documents', label: 'tab_documents', icon: Icon.doc, desktopOnly: true },
         { to: '/company', label: 'tab_company', icon: Icon.company },
       ]
     case 'seller':
@@ -141,6 +151,7 @@ function navFor(state: State, cartCount: number): NavItem[] {
         { to: '/orders', label: 'tab_orders', icon: Icon.ticket },
         { to: '/seller/products', label: 'tab_products', icon: Icon.catalog },
         { to: '/seller/settings', label: 'tab_delivery', icon: Icon.truck },
+        { to: '/documents', label: 'tab_documents', icon: Icon.doc, desktopOnly: true },
         { to: '/company', label: 'tab_company', icon: Icon.company },
       ]
   }
@@ -163,6 +174,7 @@ function routesFor(state: State) {
           <Route path="/" element={<Catalog canBuy />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       )
@@ -180,6 +192,8 @@ function routesFor(state: State) {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/company" element={<Company />} />
           {/* Just registered: go on to the documents */}
           <Route path="/onboarding" element={<Navigate to="/company" replace />} />
@@ -194,6 +208,8 @@ function routesFor(state: State) {
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/seller/products" element={<SellerProducts />} />
           <Route path="/seller/settings" element={<SellerSettings />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/company" element={<Company />} />
           {/* Just registered: go on to the documents */}
           <Route path="/onboarding" element={<Navigate to="/company" replace />} />
@@ -287,13 +303,16 @@ function Sidebar({ nav, state }: { nav: NavItem[]; state: State }) {
   const t = useT()
   return (
     <aside className="sidebar">
-      <Link to="/" className="side-brand">
-        <span className="brand">QB</span>
-        <span>
-          <b>QB</b>
-          <small>HoReCa</small>
-        </span>
-      </Link>
+      <div className="side-top">
+        <Link to="/" className="side-brand">
+          <span className="brand">QB</span>
+          <span>
+            <b>QB</b>
+            <small>HoReCa</small>
+          </span>
+        </Link>
+        {state !== 'guest' && state !== 'admin' && <Bell />}
+      </div>
       <ModeSwitch />
       <nav className="side-nav">
         {nav.map((n) => (
@@ -328,6 +347,7 @@ function MobileTopBar({ state }: { state: State }) {
       </Link>
       {dual ? <ModeSwitch compact /> : state === 'guest' ? <span className="who" /> : <Who />}
       <span className="spacer" />
+      {state !== 'guest' && state !== 'admin' && <Bell />}
       <LangCycle />
       {me ? (
         <button
@@ -364,6 +384,18 @@ function LangCycle() {
         </button>
       )}
     </LangContext.Consumer>
+  )
+}
+
+/** Round bell with the unread count; opens the notifications page. */
+function Bell() {
+  const t = useT()
+  const { unread } = useNotices()
+  return (
+    <NavLink to="/notifications" className="ibtn bell" aria-label={t('tab_notifications')} title={t('tab_notifications')}>
+      {Icon.bell()}
+      {unread > 0 && <span className="dot">{unread > 99 ? '99+' : unread}</span>}
+    </NavLink>
   )
 }
 

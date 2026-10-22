@@ -248,6 +248,7 @@ class OrderOut(BaseModel):
     deadline: datetime | None
     saving_amd: int  # won in negotiation: lower line prices + order discount
     events: list[EventOut]
+    unread_messages: int = 0
 
 
 class OrderListItem(BaseModel):
@@ -441,3 +442,68 @@ class DocumentOut(ORM):
 class SrcNumberIn(BaseModel):
     kind: DocumentKind
     number: str
+
+
+# --- chat, notifications, document register -------------------------------------------------------------
+
+
+class MessageIn(BaseModel):
+    text: str
+
+
+class MessageOut(ORM):
+    id: uuid.UUID
+    side: str
+    text: str
+    at: datetime
+    user_id: uuid.UUID | None
+    mine: bool = False
+
+
+class NotificationOut(ORM):
+    id: uuid.UUID
+    type: str
+    order_id: uuid.UUID | None
+    payload: dict | None
+    created_at: datetime
+    read_at: datetime | None
+
+
+class NotificationPage(BaseModel):
+    items: list[NotificationOut]
+    unread: int
+
+
+class ReadIn(BaseModel):
+    ids: list[uuid.UUID] | None = None  # None = all
+
+
+class NotifySettings(BaseModel):
+    email: bool
+    telegram: bool
+    email_address: str | None = None
+    telegram_linked: bool = False
+    telegram_available: bool = False
+
+
+class NotifySettingsIn(BaseModel):
+    email: bool
+    telegram: bool
+
+
+class DocumentRow(BaseModel):
+    id: uuid.UUID
+    kind: DocumentKind
+    number: str | None
+    external_id: str | None
+    status: DocumentStatus
+    issued_at: datetime | None
+    order_id: uuid.UUID
+    order_number: str
+    order_total_amd: int
+    counterparty: str
+
+
+class DocumentPage(BaseModel):
+    items: list[DocumentRow]
+    total: int

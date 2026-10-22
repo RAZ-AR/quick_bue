@@ -76,6 +76,7 @@ export interface Order {
   lines: OrderLine[]; negotiation: Negotiation | null; allowed_actions: string[]; address: Address | null
   next_step: NextStep | null; deadline: string | null; saving_amd: number
   events: { type: string; at: string; auto: boolean }[]
+  unread_messages: number
 }
 export interface OrderListItem {
   id: string; number: string; status: OrderStatus; counterparty: Brief; total_amd: number
@@ -206,6 +207,21 @@ export async function openFile(path: string): Promise<void> {
 const post = <T>(path: string, body?: unknown, headers?: HeadersInit) =>
   request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body), headers })
 
+export interface Notice {
+  id: string; type: string; order_id: string | null
+  payload: { number?: string; counterparty?: string; text?: string } | null
+  created_at: string; read_at: string | null
+}
+export interface NotifySettings {
+  email: boolean; telegram: boolean; email_address: string | null; telegram_linked: boolean; telegram_available: boolean
+}
+export interface ChatMessage { id: string; side: 'buyer' | 'seller'; text: string; at: string; user_id: string | null; mine: boolean }
+export interface DocumentRow {
+  id: string; kind: DocKind; number: string | null; external_id: string | null; status: string; issued_at: string | null
+  order_id: string; order_number: string; order_total_amd: number; counterparty: string
+}
+export interface DocumentFilter { kind?: DocKind[]; date_from?: string; date_to?: string; q?: string }
+
 export const api = {
   config: () => request<PublicConfig>('/config'),
   devLogin: (email: string) => post<{ access_token: string }>('/auth/dev-login', { email }),
@@ -297,4 +313,23 @@ export const api = {
   srcNumber: (orderId: string, kind: 'tax_invoice' | 'waybill', number: string) =>
     post<QDocument>(`/orders/${orderId}/documents/src`, { kind, number }),
   document: (id: string) => request<QDocument>(`/documents/${id}`),
+  documentRegister: (f: DocumentFilter) => {
+    const qs = new URLSearchParams()
+    f.kind?.forEach((k) => qs.append('kind', k))
+    if (f.date_from) qs.set('date_from', f.date_from)
+    if (f.date_to) qs.set('date_to', f.date_to)
+    if (f.q?.trim()) qs.set('q', f.q.trim())
+    return request<{ items: DocumentRow[]; total: number }>(`/documents?${qs}`)
+  },
+
+  // chat, notifications
+  messages: (orderId: string) => request<ChatMessage[]>(`/orders/${orderId}/messages`),
+  sendMessage: (orderId: string, text: string) => post<ChatMessage>(`/orders/${orderId}/messages`, { text }),
+  notifications: () => request<{ items: Notice[]; unread: number }>('/notifications'),
+  readNotifications: (ids?: string[]) => post<void>('/notifications/read', { ids: ids ?? null }),
+  notifySettings: () => request<NotifySettings>('/me/notifications'),
+  saveNotifySettings: (email: boolean, telegram: boolean) =>
+    request<NotifySettings>('/me/notifications', { method: 'PUT', body: JSON.stringify({ email, telegram }) }),
+  telegramLink: () => post<{ url: string }>('/me/telegram/link'),
+  telegramUnlink: () => request<NotifySettings>('/me/telegram', { method: 'DELETE' }),
 }

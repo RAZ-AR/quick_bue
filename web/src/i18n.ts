@@ -336,7 +336,69 @@ export const TEXTS = {
   response_hours: { hy: 'Սակարկմանը պատասխան, ժամ', ru: 'Ответ на торг, часов', en: 'Offer answer, hours' },
   zones: { hy: 'Առաքման գոտիներ', ru: 'Районы и дни доставки', en: 'Delivery zones and days' },
   zones_hint: { hy: 'Դատարկ՝ ամբողջ քաղաքը, բոլոր օրերը', ru: 'Пусто — весь город, любые дни', en: 'Empty — whole city, any day' },
+  // notifications, chat, documents
+  tab_notifications: { hy: 'Ծանուցումներ', ru: 'Уведомления', en: 'Notifications' },
+  mark_all_read: { hy: 'Նշել բոլորը կարդացված', ru: 'Прочитать все', en: 'Mark all read' },
+  no_notifications: { hy: 'Ծանուցումներ դեռ չկան', ru: 'Уведомлений пока нет', en: 'No notifications yet' },
+  notify_settings: { hy: 'Ուր ուղարկել', ru: 'Куда присылать', en: 'Where to send' },
+  notify_in_app: { hy: 'Հավելվածում՝ միշտ', ru: 'В приложении — всегда', en: 'In the app — always' },
+  notify_email: { hy: 'Էլ. փոստով', ru: 'На почту', en: 'By e-mail' },
+  notify_telegram: { hy: 'Telegram-ով', ru: 'В Telegram', en: 'In Telegram' },
+  link_telegram: { hy: 'Կապել Telegram-ը', ru: 'Привязать Telegram', en: 'Link Telegram' },
+  unlink_telegram: { hy: 'Անջատել', ru: 'Отвязать', en: 'Unlink' },
+  telegram_link_hint: {
+    hy: 'Բացեք բոտը և սեղմեք Start, հետո թարմացրեք էջը',
+    ru: 'Откройте бота и нажмите Start, затем обновите страницу',
+    en: 'Open the bot and press Start, then refresh this page',
+  },
+  telegram_unavailable: { hy: 'Telegram բոտը դեռ միացված չէ', ru: 'Telegram-бот ещё не подключён', en: 'Telegram bot is not set up yet' },
+  chat: { hy: 'Նամակագրություն', ru: 'Переписка', en: 'Chat' },
+  chat_placeholder: { hy: 'Գրեք պատվերի մասին…', ru: 'Напишите по заказу…', en: 'Write about this order…' },
+  no_messages: {
+    hy: 'Հարցեր փոխարինման, ժամի կամ որակի մասին՝ այստեղ',
+    ru: 'Вопросы о замене, времени доставки, качестве — здесь',
+    en: 'Questions about substitutes, timing or quality go here',
+  },
+  send: { hy: 'Ուղարկել', ru: 'Отправить', en: 'Send' },
+  tab_documents: { hy: 'Փաստաթղթեր', ru: 'Документы', en: 'Documents' },
+  documents_purchases: { hy: 'Գնումների փաստաթղթեր', ru: 'Документы по закупкам', en: 'Purchase documents' },
+  documents_sales: { hy: 'Վաճառքի փաստաթղթեր', ru: 'Документы по продажам', en: 'Sales documents' },
+  all_kinds: { hy: 'Բոլորը', ru: 'Все', en: 'All' },
+  kind_invoice: { hy: 'Հաշիվներ', ru: 'Счета', en: 'Invoices' },
+  kind_delivery_note: { hy: 'Ապրանքագրեր', ru: 'Накладные', en: 'Delivery notes' },
+  kind_acceptance_act: { hy: 'Ակտեր', ru: 'Акты', en: 'Acts' },
+  kind_src: { hy: 'ՊԵԿ', ru: 'КГД', en: 'SRC' },
+  period_month: { hy: 'Այս ամիս', ru: 'Этот месяц', en: 'This month' },
+  period_prev: { hy: 'Նախորդ ամիս', ru: 'Прошлый месяц', en: 'Last month' },
+  period_all: { hy: 'Ամբողջ ժամանակ', ru: 'За всё время', en: 'All time' },
+  search_documents: { hy: 'Համար, պատվեր կամ ընկերություն', ru: 'Номер, заказ или компания', en: 'Number, order or company' },
+  print_selected: { hy: 'Տպել ընտրվածները', ru: 'Печать выбранных', en: 'Print selected' },
+  select_all: { hy: 'Ընտրել բոլորը', ru: 'Выбрать все', en: 'Select all' },
+  no_documents: { hy: 'Փաստաթղթեր չկան', ru: 'Документов нет', en: 'No documents' },
+  documents_hint: {
+    hy: 'Հաշիվն ու ապրանքագիրը ստեղծվում են հաստատելիս, ակտը՝ ընդունելիս',
+    ru: 'Счёт и накладная создаются при подтверждении заказа, акт — при приёмке',
+    en: 'Invoice and delivery note appear when an order is confirmed, the act on acceptance',
+  },
 } satisfies Record<string, T3>
+
+/** Bell texts; the server sends the same ones by e-mail and Telegram (app/services/notifications.py). */
+export const NOTICES: Record<string, T3> = {
+  order_created: { hy: 'Նոր պատվեր {number}՝ {counterparty}', ru: 'Новый заказ {number} от {counterparty}', en: 'New order {number} from {counterparty}' },
+  offer_countered: { hy: '{counterparty}-ը առաջարկում է այլ գին՝ {number}', ru: '{counterparty} предлагает другую цену по заказу {number}', en: '{counterparty} proposes another price on {number}' },
+  negotiation_agreed: { hy: 'Գինը համաձայնեցված է՝ {number}', ru: 'Цена по заказу {number} согласована', en: 'Price agreed on {number}' },
+  negotiation_declined: { hy: 'Գնի առաջարկը մերժվեց՝ {number}', ru: 'Предложение цены по заказу {number} отклонено', en: 'Price offer on {number} declined' },
+  negotiation_expired: { hy: 'Սակարկության ժամկետը լրացավ՝ {number}', ru: 'Время на торг по заказу {number} истекло', en: 'Haggling time on {number} ran out' },
+  order_confirmed: { hy: '{counterparty}-ը հաստատեց պատվերը {number}', ru: '{counterparty} подтвердил заказ {number}', en: '{counterparty} confirmed order {number}' },
+  order_rejected: { hy: '{counterparty}-ը մերժեց պատվերը {number}', ru: '{counterparty} отклонил заказ {number}', en: '{counterparty} rejected order {number}' },
+  order_cancelled: { hy: 'Պատվերը {number} չեղարկվեց', ru: 'Заказ {number} отменён', en: 'Order {number} was cancelled' },
+  order_delivering: { hy: 'Պատվերը {number} ճանապարհին է', ru: 'Заказ {number} в пути', en: 'Order {number} is on its way' },
+  order_delivered: { hy: 'Պատվերը {number} առաքված է․ ստուգեք և ընդունեք', ru: 'Заказ {number} доставлен: проверьте и примите', en: 'Order {number} delivered: check and accept it' },
+  order_accepted: { hy: '{counterparty}-ը ընդունեց պատվերը {number}', ru: '{counterparty} принял заказ {number}', en: '{counterparty} accepted order {number}' },
+  order_paid: { hy: 'Պատվերը {number} նշված է որպես վճարված', ru: 'Заказ {number} отмечен как оплаченный', en: 'Order {number} marked as paid' },
+  agreement_created: { hy: '{counterparty}-ը ամրագրեց գինը ձեզ համար ({number})', ru: '{counterparty} закрепил для вас цену (заказ {number})', en: '{counterparty} fixed a price for you (order {number})' },
+  message: { hy: '{counterparty}՝ {number}', ru: '{counterparty} · {number}', en: '{counterparty} · {number}' },
+}
 
 export const ACTIONS: Record<string, T3> = {
   confirm: { hy: 'Հաստատել', ru: 'Подтвердить', en: 'Confirm' },
@@ -462,6 +524,7 @@ export const PROBLEMS: Record<string, T3> = {
   accept_below_price: { hy: 'Ընդունման գինը պետք է ցածր լինի', ru: 'Цена принятия должна быть ниже цены', en: 'Accept price must be below the price' },
   floor_above_accept: { hy: 'Մերժման շեմը բարձր է', ru: 'Порог отказа выше цены принятия', en: 'Floor above accept price' },
   bad_zone: { hy: 'Նշեք թաղամասն ու օրերը', ru: 'Укажите район и дни', en: 'Set a district and days' },
+  too_long: { hy: 'Շատ երկար է', ru: 'Слишком длинно', en: 'Too long' },
   invalid_transition: { hy: 'Պատվերն արդեն փոխվել է', ru: 'Заказ уже изменился — обновите', en: 'The order changed, refresh' },
 }
 

@@ -18,6 +18,7 @@ class StatementStatus(StrEnum):
 
 
 class Channel(StrEnum):
+    app = "app"  # the bell in the web app; the other channels copy what it shows
     telegram = "telegram"
     push = "push"
     email = "email"
@@ -70,6 +71,10 @@ class Notification(UUIDPk, Timestamped, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     channel: Mapped[Channel] = mapped_column(str_enum(Channel))
     type: Mapped[str] = mapped_column(String(48))
+    order_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), index=True
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     payload: Mapped[dict | None] = mapped_column(I18nText)
     # (event, recipient, channel): a retried job never sends the same message twice
     dedupe_key: Mapped[str | None] = mapped_column(String(160), unique=True)

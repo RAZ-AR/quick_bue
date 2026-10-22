@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_sessionmaker
 from app.platform.clock import utcnow
-from app.services import agreements, negotiation, orders
+from app.services import agreements, negotiation, notifications, orders
 from app.workers.outbox import dispatch_pending
 
 log = logging.getLogger("qb.scheduler")
@@ -48,6 +48,8 @@ async def tick() -> None:
 
 async def outbox_tick() -> None:
     await run_job("dispatch_outbox", dispatch_pending)
+    # Separate transaction: a slow e-mail or Telegram call never holds the outbox rows
+    await run_job("deliver_notifications", notifications.deliver_pending)
 
 
 async def main() -> None:

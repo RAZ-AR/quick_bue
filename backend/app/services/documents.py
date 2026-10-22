@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -256,3 +256,50 @@ async def set_src_number(
     doc.issued_at = now
     doc.payload = {"kind": kind, "title": TITLES[kind], "external_id": number}
     return doc
+
+
+# --- the company's document register (the "Documents" page) ---------------------------------------------
+
+
+async def list_for_org(
+    session: AsyncSession,
+    actor: Actor,
+    *,
+    kinds: list[DocumentKind] | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    q: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[tuple[Document, Order, Organization]], int]:
+    """Documents of the company's orders on the side it acts on now: purchases or sales."""
+    mine = Order.buyer_id if actor.is_buyer else Order.seller_id
+    theirs = Order.seller_id if actor.is_buyer else Order.buyer_id
+    stmt = (
+        select(Document, Order, Organization)
+        .join(Order, Order.id == Document.order_id)
+        .join(Organization, Organization.id == theirs)
+        .where(mine == actor.org.id)
+    )
+    if kinds:
+        stmt = stmt.where(Document.kind.in_(kinds))
+    if date_from:
+        stmt = stmt.where(Document.issued_at >= date_from)
+    if date_to:
+        stmt = stmt.where(Document.issued_at < date_to)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            Document.number.ilike(term)
+            | Document.external_id.ilike(term)
+            | Order.number.ilike(term)
+            | Organization.display_name.ilike(term)
+            | Organization.legal_name.ilike(term)
+        )
+    total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    rows = await session.execute(
+        stmt.order_by(Document.issued_at.desc().nulls_last(), Document.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return [tuple(r) for r in rows.all()], total

@@ -106,6 +106,7 @@ def log(session: AsyncSession, order: Order, type_: str, user_id: uuid.UUID | No
         number=order.number,
         buyer_id=order.buyer_id,
         seller_id=order.seller_id,
+        by_user=user_id,
         **payload,
     )
 

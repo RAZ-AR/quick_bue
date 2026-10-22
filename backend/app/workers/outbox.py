@@ -1,7 +1,7 @@
 """Outbox dispatcher: hands committed events to their handlers (docs/03-architecture.md §3.6).
 
-The notification channel (Telegram, WhatsApp, e-mail, web push) is not chosen yet, so events are only logged
-and marked processed. A channel plugs in as a handler per topic without touching the services.
+Order events become notifications (app/services/notifications.py); other topics are only logged.
+A new side effect plugs in as a handler per topic without touching the services.
 """
 
 import logging
@@ -12,6 +12,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import OutboxEvent
+from app.services import notifications
 
 log = logging.getLogger("qb.outbox")
 
@@ -22,7 +23,7 @@ async def _log_only(session: AsyncSession, event: OutboxEvent) -> None:
     log.info("event %s %s", event.topic, event.payload.get("number", ""))
 
 
-HANDLERS: dict[str, Handler] = {}
+HANDLERS: dict[str, Handler] = {topic: notifications.fan_out for topic in notifications.KINDS}
 MAX_ATTEMPTS = 10
 KEEP_DAYS = 7
 
