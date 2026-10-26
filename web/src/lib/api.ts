@@ -101,7 +101,10 @@ export interface Company {
   tin: string; legal_name: string; registration_number: string | null; legal_address: string | null
   director_name: string | null; tax_regime: TaxRegime | null; active: boolean
 }
-export interface Lookup { tin: string; found: boolean; already_registered: boolean; provider: string; company: Company | null }
+export interface Lookup {
+  tin: string; found: boolean; already_registered: boolean; provider: string; company: Company | null
+  unavailable: boolean // the registry did not answer: fill in by hand
+}
 export interface OrgDetail {
   id: string; is_buyer: boolean; is_seller: boolean; status: 'pending' | 'active' | 'blocked'; legal_name: string
   display_name: string; tin: string | null; tax_regime: TaxRegime | null; registration_number: string | null

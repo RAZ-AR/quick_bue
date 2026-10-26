@@ -155,6 +155,17 @@ export const TEXTS = {
   find: { hy: 'Գտնել', ru: 'Найти', en: 'Find' },
   found_in: { hy: 'Գտնվել է ռեեստրում', ru: 'Нашли в реестре', en: 'Found in the registry' },
   demo_data: { hy: 'դեմո տվյալներ', ru: 'демо-данные', en: 'demo data' },
+  eregister_source: { hy: 'Պետռեգիստր՝ e-register.moj.am', ru: 'Госреестр: e-register.moj.am', en: 'State register: e-register.moj.am' },
+  fill_missing: {
+    hy: 'Տնօրենը և հարկման ռեժիմը բաց ռեգիստրում չկան. լրացրեք ինքներդ։',
+    ru: 'Директора и налогового режима нет в открытом реестре — заполните сами.',
+    en: 'The director and tax regime are not in the open register — please fill them in.',
+  },
+  registry_unavailable: {
+    hy: 'Պետռեգիստրը հիմա չի պատասխանում։ Լրացրեք ձեռքով, օպերատորը կստուգի քաղվածքով։',
+    ru: 'Госреестр сейчас не отвечает. Заполните вручную — оператор сверит с выпиской.',
+    en: 'The state register is not answering right now. Fill in by hand — an operator will check the extract.',
+  },
   not_found_manual: {
     hy: 'Չգտանք։ Լրացրեք ձեռքով, օպերատորը կստուգի։',
     ru: 'Не нашли — заполните вручную, оператор проверит.',

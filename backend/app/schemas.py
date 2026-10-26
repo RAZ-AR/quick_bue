@@ -361,8 +361,9 @@ class LookupOut(BaseModel):
     tin: str
     found: bool
     already_registered: bool
-    provider: str  # "demo" means fictional data
+    provider: str  # "demo" means fictional data, "eregister" the state register's public search
     company: CompanyOut | None
+    unavailable: bool = False  # the registry did not answer: fill in by hand
 
 
 class NewOrgIn(BaseModel):

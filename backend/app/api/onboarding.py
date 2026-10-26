@@ -57,6 +57,7 @@ async def registry_lookup(
         found=c is not None,
         already_registered=r.already_registered,
         provider=r.provider,
+        unavailable=r.unavailable,
         company=CompanyOut(
             tin=c.tin,
             legal_name=c.legal_name,

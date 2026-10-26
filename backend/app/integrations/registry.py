@@ -3,15 +3,29 @@
 Armenia has no official public API for this (as of Oct 2026): the state register (e-register.moj.am)
 and the SRC taxpayer search are web forms. Paid intermediaries exist (an Apify actor over the register's
 open data, karg.am), but their terms and accuracy are not verified. So the registry is a port: services
-call `get_registry()` and never know which provider answers. "demo" serves fictional companies.
+call `get_registry()` and never know which provider answers. "demo" serves fictional companies,
+"eregister" reads the register's public company search (integrations/eregister.py), "none" finds nothing.
 """
 
+import dataclasses
+import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Protocol
 
+from redis import asyncio as aioredis
+from redis.exceptions import RedisError
+
 from app.config import get_settings
 from app.models import TaxRegime
+
+log = logging.getLogger(__name__)
+
+
+class RegistryUnavailable(Exception):
+    """The registry did not answer or sent what we cannot read: sign-up falls back to manual entry."""
+
 
 TIN_RE = re.compile(r"^\d{8}$")
 
@@ -72,5 +86,64 @@ class NoRegistry:
         return None
 
 
+class CachedRegistry:
+    """Remembers answers in Redis: the register is asked once per TIN a day (lookup and sign-up both ask).
+
+    "Not found" is kept shorter: a company registered today should show up soon. Errors are not cached.
+    Works without Redis: then every lookup goes to the register.
+    """
+
+    FOUND_S = 24 * 3600
+    NOT_FOUND_S = 3 * 3600
+
+    def __init__(self, inner: Registry, redis: aioredis.Redis):
+        self.inner = inner
+        self.name = inner.name
+        self._redis = redis
+
+    def _key(self, tin: str) -> str:
+        return f"registry:{self.name}:{tin}"
+
+    async def lookup(self, tin: str) -> CompanyInfo | None:
+        try:
+            raw = await self._redis.get(self._key(tin))
+        except (RedisError, OSError) as e:
+            log.warning("registry cache unavailable: %s", e)
+            raw = None
+        if raw is not None:
+            data = json.loads(raw)
+            if data is None:
+                return None
+            data["tax_regime"] = TaxRegime(data["tax_regime"]) if data.get("tax_regime") else None
+            return CompanyInfo(**data)
+
+        company = await self.inner.lookup(tin)  # RegistryUnavailable passes through, uncached
+        value = json.dumps(dataclasses.asdict(company) if company else None, ensure_ascii=False)
+        try:
+            await self._redis.set(self._key(tin), value, ex=self.FOUND_S if company else self.NOT_FOUND_S)
+        except (RedisError, OSError) as e:
+            log.warning("registry cache unavailable: %s", e)
+        return company
+
+
+_redis_client: aioredis.Redis | None = None
+
+
+def _redis() -> aioredis.Redis:
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = aioredis.from_url(
+            get_settings().redis_url, socket_timeout=1, socket_connect_timeout=1
+        )
+    return _redis_client
+
+
 def get_registry() -> Registry:
-    return DemoRegistry() if get_settings().registry_provider == "demo" else NoRegistry()
+    settings = get_settings()
+    if settings.registry_provider == "demo":
+        return DemoRegistry()
+    if settings.registry_provider == "eregister":
+        from app.integrations.eregister import EregisterRegistry
+
+        return CachedRegistry(EregisterRegistry(settings.eregister_url), _redis())
+    return NoRegistry()

@@ -70,7 +70,7 @@ backend/app/
 ├── services/      # работа с базой: cart, checkout, orders, negotiation, agreements, prices, documents,
 │                  # onboarding (регистрация по ИНН, роли), verification (файлы и модерация),
 │                  # seller_catalog (свои товары и условия доставки), price_import (прайс из Excel/CSV) — без commit
-├── integrations/  # порты внешних систем: registry (demo | none — открытого API реестра РА нет),
+├── integrations/  # порты внешних систем: registry (demo | eregister — открытый поиск e-register.moj.am | none),
 │                  # mailer (console | resend) для кодов входа
 ├── platform/      # authz (Actor + таблица прав), errors, clock, outbox, idempotency, storage (файлы в MEDIA_DIR)
 ├── api/           # auth, catalog (публичный), cart (+ /checkout), orders (+ торг, /agreements), seller; commit здесь
@@ -123,6 +123,11 @@ backend/app/
   применяет его без хранения файла — клиент присылает строки дважды (предпросмотр и применение). Сопоставление — по
   артикулу (код ArmSoft), без артикула или у товара без артикула — по точному названию; повторная загрузка того же
   файла ничего не меняет. Строки с ошибками пропускаются.
+- **Поиск по ИНН** (`REGISTRY_PROVIDER=eregister`): API у госреестра нет, `integrations/eregister.py` читает его
+  открытые страницы (поиск → карточка на hy и en), кэш в Redis на сутки (не найдено — 3 ч, ошибки не кэшируются).
+  Незнакомая вёрстка или сбой — `RegistryUnavailable`, анкета открывается для ручного ввода. Директора и налогового
+  режима в открытой карточке нет. Тесты — на сохранённых страницах `tests/fixtures/eregister`; если реестр поменяет
+  вёрстку, пересохраните их и поправьте разбор.
 - Поиск: `products.search_text` собирается `core/search.build_search_text` из всех языков + транслитерации;
   обновляйте его при каждом изменении названия.
 

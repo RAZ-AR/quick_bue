@@ -1,12 +1,13 @@
 """Self sign-up of a company: look it up by TIN, confirm the prefilled requisites, become its owner."""
 
+import logging
 from dataclasses import dataclass, field
 from datetime import time
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.integrations.registry import CompanyInfo, get_registry, normalize_tin
+from app.integrations.registry import CompanyInfo, RegistryUnavailable, get_registry, normalize_tin
 from app.models import (
     Address,
     Membership,
@@ -23,6 +24,8 @@ from app.models import (
 from app.platform.authz import Action, Actor
 from app.platform.errors import Conflict, ValidationFailed
 
+log = logging.getLogger(__name__)
+
 
 @dataclass
 class LookupResult:
@@ -30,6 +33,7 @@ class LookupResult:
     company: CompanyInfo | None
     already_registered: bool
     provider: str
+    unavailable: bool = False  # the registry did not answer: fill in by hand
 
 
 async def lookup(session: AsyncSession, raw_tin: str) -> LookupResult:
@@ -37,9 +41,13 @@ async def lookup(session: AsyncSession, raw_tin: str) -> LookupResult:
     if tin is None:
         raise ValidationFailed([{"code": "bad_tin"}])
     registry = get_registry()
-    company = await registry.lookup(tin)
+    try:
+        company, unavailable = await registry.lookup(tin), False
+    except RegistryUnavailable as e:
+        log.warning("registry lookup failed for %s: %s", tin, e)
+        company, unavailable = None, True
     taken = await session.scalar(select(Organization.id).where(Organization.tin == tin)) is not None
-    return LookupResult(tin, company, taken, registry.name)
+    return LookupResult(tin, company, taken, registry.name, unavailable)
 
 
 @dataclass
@@ -81,7 +89,10 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
 
     # Requisites match the registry? Remember the source, so the operator knows what was typed by hand
     registry = get_registry()
-    found = await registry.lookup(tin)  # type: ignore[arg-type]
+    try:
+        found = await registry.lookup(tin)  # type: ignore[arg-type]
+    except RegistryUnavailable:
+        found = None  # typed by hand; the operator checks against the uploaded extract
     source = registry.name if found and found.legal_name == data.legal_name else "manual"
     if found and not found.active:
         raise ValidationFailed([{"field": "tin", "code": "company_inactive"}])

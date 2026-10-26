@@ -33,8 +33,10 @@ class Settings(BaseSettings):
     web_app_url: str = "http://localhost:8090"
 
     # Company registry used to prefill sign-up by TIN. There is no official public API in Armenia (docs/04):
-    # "demo" = built-in fictional companies, "none" = manual entry only.
-    registry_provider: Literal["demo", "none"] = "demo"
+    # "demo" = built-in fictional companies, "eregister" = public company search of e-register.moj.am
+    # (name, status, registration number, address; cached a day), "none" = manual entry only.
+    registry_provider: Literal["demo", "eregister", "none"] = "demo"
+    eregister_url: str = "https://e-register.moj.am"
 
     # Uploaded verification files (local volume; S3/R2 later)
     media_dir: str = "media"

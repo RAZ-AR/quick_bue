@@ -141,7 +141,7 @@ export function Onboarding() {
           {lookup?.company && !lookup.company.active && <p className="warn">{t('company_closed')}</p>}
           {lookup && !lookup.found && !lookup.already_registered && (
             <button className="link small" onClick={() => setStep('form')}>
-              {t('not_found_manual')} →
+              {lookup.unavailable ? t('registry_unavailable') : t('not_found_manual')} →
             </button>
           )}
           {error && <p className="error">{error}</p>}
@@ -158,12 +158,14 @@ export function Onboarding() {
               <span>
                 <strong style={{ fontSize: 15 }}>✓ {t('found_in')}</strong>
                 {lookup.provider === 'demo' && <span className="muted small">{t('demo_data')}</span>}
+                {lookup.provider === 'eregister' && <span className="muted small">{t('eregister_source')}</span>}
               </span>
               <span className="clock">{form.tin}</span>
             </div>
           ) : (
-            <p className="warn">{t('not_found_manual')}</p>
+            <p className="warn">{lookup?.unavailable ? t('registry_unavailable') : t('not_found_manual')}</p>
           )}
+          {lookup?.found && lookup.provider === 'eregister' && <p className="muted small">{t('fill_missing')}</p>}
           <Field label={t('legal_name')} required {...bind('legal_name')} />
           <Field label={t('display_name')} {...bind('display_name')} />
           <SelectField
