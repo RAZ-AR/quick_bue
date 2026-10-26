@@ -6,7 +6,8 @@
 экраны, торг, модель данных и план — [docs/02-mvp.md](docs/02-mvp.md),
 принципы, флоу, модули и правила слоёв — [docs/03-architecture.md](docs/03-architecture.md),
 документы по законодательству РА, регистрация по ИНН и верификация — [docs/04-documents-and-verification.md](docs/04-documents-and-verification.md),
-вход, гостевой режим, кабинеты и две роли — [docs/05-cabinets-and-auth.md](docs/05-cabinets-and-auth.md).
+вход, гостевой режим, кабинеты и две роли — [docs/05-cabinets-and-auth.md](docs/05-cabinets-and-auth.md),
+роадмап до Нового года — [docs/07-roadmap.md](docs/07-roadmap.md).
 
 Языки интерфейса и каталога: армянский (`hy`), русский (`ru`), английский (`en`). Валюта — AMD, целые драмы.
 Пользователю всё пишем по-русски; код, комментарии и коммиты — по-английски.
