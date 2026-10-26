@@ -97,6 +97,8 @@ class Product(UUIDPk, Timestamped, Base):
     qty_step: Mapped[Decimal] = mapped_column(Qty, default=1)
     in_stock: Mapped[bool] = mapped_column(Boolean, default=True)
     allow_offers: Mapped[bool] = mapped_column(Boolean, default=False)
+    # A seller's paid extra (delivery to the hour, unloading): not in the catalog, offered in the cart
+    is_service: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     images: Mapped[list[str]] = mapped_column(ARRAY(String(500)), default=list)
     search_text: Mapped[str] = mapped_column(Text, default="")
     # Archived products disappear from the catalog but stay in order history

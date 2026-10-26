@@ -182,6 +182,11 @@ class Address(UUIDPk, Timestamped, Base):
     lat: Mapped[float | None] = mapped_column(Numeric(9, 6))
     lng: Mapped[float | None] = mapped_column(Numeric(9, 6))
     delivery_notes: Mapped[str | None] = mapped_column(Text)
+    # Who receives the goods at this address (a manager, a chef): shown to the seller and on the delivery note
+    contact_name: Mapped[str | None] = mapped_column(String(120))
+    contact_phone: Mapped[str | None] = mapped_column(String(32))
+    # Removed addresses stay for old orders and documents, they just leave the list
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class SellerProfile(Timestamped, Base):

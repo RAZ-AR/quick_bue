@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { HaggleHowTo, howToSeen } from '../components/HaggleHowTo'
 import { PriceDial } from '../components/PriceDial'
 import { QtyStepper } from '../components/QtyStepper'
+import { CartSuggestions, SellerSuggestions, TierHint } from '../components/Suggestions'
 import { OrderMeter } from '../components/ui'
 import { fill, problemText, SOURCES, useLang, useT } from '../i18n'
-import { api, ApiError, type Address, type CartGroup, type CartLine, type Product } from '../lib/api'
+import { api, ApiError, type Address, type CartGroup, type CartLine, type Product, type Suggestion } from '../lib/api'
 import { useCart } from '../lib/cart'
 import { amd, date, tr, unit } from '../lib/format'
 import { pct, priceForDiscount } from '../lib/haggle'
@@ -130,6 +131,7 @@ function ServerCart() {
   const [discounts, setDiscounts] = useState<Record<string, number>>({})
   const [sending, setSending] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   // One key per attempt: a double tap or a retry never creates the orders twice
   const attempt = useRef(crypto.randomUUID())
 
@@ -140,6 +142,12 @@ function ServerCart() {
       setAddressId((id) => id ?? list[0]?.id)
     })
   }, [refresh])
+
+  // Suggestions follow the cart: each change may close a gap or open a volume price
+  useEffect(() => {
+    if (!cart?.groups.length) return setSuggestions([])
+    api.cartSuggestions(addressId).then(setSuggestions, () => setSuggestions([]))
+  }, [cart, addressId])
 
   if (!cart) return <p className="muted">{t('loading')}</p>
   if (cart.groups.length === 0) {
@@ -195,8 +203,10 @@ function ServerCart() {
           rounds={cart.offer_max_rounds}
           discount={discounts[g.seller.id] ?? 0}
           onDiscount={(v) => setDiscounts((d) => ({ ...d, [g.seller.id]: v }))}
+          suggestions={suggestions.filter((x) => x.seller.id === g.seller.id)}
         />
       ))}
+      <CartSuggestions items={suggestions} />
 
       <section className="ticket checkout">
         {addresses.length > 0 && (
@@ -210,6 +220,19 @@ function ServerCart() {
               ))}
             </select>
           </label>
+        )}
+        {(() => {
+          const a = addresses.find((x) => x.id === addressId)
+          return a && (a.contact_name || a.contact_phone) ? (
+            <p className="muted small" style={{ margin: 0 }}>
+              {t('receiver')}: {[a.contact_name, a.contact_phone].filter(Boolean).join(', ')}
+            </p>
+          ) : null
+        })()}
+        {addresses.length === 0 && (
+          <Link to="/company#addresses" className="btn accent block">
+            + {t('add_delivery_address')}
+          </Link>
         )}
         <div className="total-row">
           <span>
@@ -232,7 +255,7 @@ function ServerCart() {
             {e}
           </p>
         ))}
-        <button className="btn primary block" disabled={sending || cart.problems.length > 0} onClick={send}>
+        <button className="btn primary block" disabled={sending || cart.problems.length > 0 || addresses.length === 0} onClick={send}>
           {t('send_all')} <span className="sub num">· {amd(cart.total_amd)}</span>
         </button>
       </section>
@@ -246,10 +269,12 @@ function SellerTicket({
   rounds,
   discount,
   onDiscount,
+  suggestions,
 }: {
   g: CartGroup
   canNegotiate: boolean
   rounds: number
+  suggestions: Suggestion[]
   discount: number
   onDiscount: (v: number) => void
 }) {
@@ -265,9 +290,17 @@ function SellerTicket({
       <OrderMeter subtotal={g.subtotal_amd} min={g.min_order_amd} freeFrom={g.free_delivery_from_amd} />
       <ul className="lines">
         {g.lines.map((l) => (
-          <Line key={l.product_id} l={l} canNegotiate={canNegotiate} hours={g.offer_response_hours} rounds={rounds} />
+          <Line
+            key={l.product_id}
+            l={l}
+            canNegotiate={canNegotiate}
+            hours={g.offer_response_hours}
+            rounds={rounds}
+            tier={suggestions.find((x) => x.kind === 'tier' && x.product_id === l.product_id)}
+          />
         ))}
       </ul>
+      <SellerSuggestions items={suggestions} />
       <hr className="rule" />
       <dl className="sums">
         <dt>{t('subtotal')}</dt>
@@ -298,7 +331,19 @@ function SellerTicket({
   )
 }
 
-function Line({ l, canNegotiate, hours, rounds }: { l: CartLine; canNegotiate: boolean; hours: number; rounds: number }) {
+function Line({
+  l,
+  canNegotiate,
+  hours,
+  rounds,
+  tier,
+}: {
+  l: CartLine
+  canNegotiate: boolean
+  hours: number
+  rounds: number
+  tier?: Suggestion
+}) {
   const t = useT()
   const lang = useLang()
   const { setItem, remove } = useCart()
@@ -365,6 +410,7 @@ function Line({ l, canNegotiate, hours, rounds }: { l: CartLine; canNegotiate: b
             </button>
           ))}
       </div>
+      {tier && offered === null && <TierHint s={tier} currentQty={l.qty} />}
       {canOffer && tooSmall && offered === null && (
         <p className="muted small" style={{ margin: '6px 0 0' }}>
           {t('offer_hint')} {amd(l.offer_min_line_amd)}

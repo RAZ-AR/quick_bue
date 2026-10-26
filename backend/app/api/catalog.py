@@ -50,8 +50,8 @@ async def products(
         stmt = stmt.where(Product.category_id == category_id)
     if seller_id and not guest:  # guests cannot browse a seller they cannot see
         stmt = stmt.where(Product.seller_id == seller_id)
-    if ids:
-        stmt = stmt.where(Product.id.in_(ids))
+    # Services are offered in the cart, not listed in the catalog (asking by id still finds them)
+    stmt = stmt.where(Product.id.in_(ids)) if ids else stmt.where(Product.is_service.is_(False))
     if offers_only:
         stmt = stmt.where(Product.allow_offers.is_(True))
     order = [Product.in_stock.desc(), Product.created_at.desc()]

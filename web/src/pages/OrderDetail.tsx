@@ -102,6 +102,12 @@ export function OrderDetail() {
         <div className="meta" style={{ marginTop: 10 }}>
           {order.delivery_date && <span className="pill plain">🚚 {date(order.delivery_date, lang)}</span>}
           {order.address && <span className="pill plain">📍 {order.address.text}</span>}
+          {order.address && (order.address.contact_name || order.address.contact_phone) && (
+            <span className="pill plain">
+              👤 {[order.address.contact_name, order.address.contact_phone].filter(Boolean).join(', ')}
+            </span>
+          )}
+          {order.address?.delivery_notes && <span className="pill plain">💬 {order.address.delivery_notes}</span>}
           <span className={order.payment_status === 'paid' ? 'pill saving' : 'pill plain'}>
             {order.payment_status === 'paid' ? `✓ ${t('paid')}` : t('unpaid')}
           </span>

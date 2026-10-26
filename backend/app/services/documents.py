@@ -176,6 +176,10 @@ async def build_payload(
         payload["transport"] = {
             "from": seller.legal_address,
             "to": address.text if address else None,
+            # Who signs for the goods at the address
+            "receiver": ", ".join(x for x in (address.contact_name, address.contact_phone) if x)
+            if address
+            else None,
             "vehicle": None,  # filled by hand on the printout or in the SRC e-waybill
             "driver": None,
         }

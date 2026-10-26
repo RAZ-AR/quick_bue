@@ -69,8 +69,10 @@ backend/app/
 │                  # автопилот), commission — без базы и HTTP; из app.models берут только enum
 ├── services/      # работа с базой: cart, checkout, orders, negotiation, agreements, prices, documents,
 │                  # onboarding (регистрация по ИНН, роли), verification (файлы и модерация),
-│                  # seller_catalog (свои товары и условия доставки), price_import (прайс из Excel/CSV) — без commit
+│                  # seller_catalog (свои товары и условия доставки), price_import (прайс из Excel/CSV),
+│                  # addresses (адреса доставки), suggestions (кросс-сейл в корзине) — без commit
 ├── integrations/  # порты внешних систем: registry (demo | eregister — открытый поиск e-register.moj.am | none),
+│                  # geocoder (адрес → дом и район через Nominatim),
 │                  # mailer (console | resend) для кодов входа
 ├── platform/      # authz (Actor + таблица прав), errors, clock, outbox, idempotency, storage (файлы в MEDIA_DIR)
 ├── api/           # auth, catalog (публичный), cart (+ /checkout), orders (+ торг, /agreements), seller; commit здесь
@@ -128,6 +130,19 @@ backend/app/
   Незнакомая вёрстка или сбой — `RegistryUnavailable`, анкета открывается для ручного ввода. Директора и налогового
   режима в открытой карточке нет. Тесты — на сохранённых страницах `tests/fixtures/eregister`; если реестр поменяет
   вёрстку, пересохраните их и поправьте разбор.
+- **Контакты** (`domain/contacts.py` = `web/src/lib/contacts.ts`, держать одинаковыми): телефон РА → `+374 XX XXX XXX`,
+  почта (формат + подсказка опечатки в домене), счёт — 16 цифр. Проверяются при регистрации и правке реквизитов.
+- **Адреса доставки** — в кабинете компании, не при регистрации: несколько на компанию, у каждого принимающий
+  (`contact_name`, `contact_phone`) и заметка для водителя; удаление = архив (`archived_at`), старые заказы и накладные
+  ссылаются на адрес. Принимающий печатается в накладной.
+- **Подсказки адреса**: улицы Еревана на hy/ru/en с районами лежат в `web/src/data/yerevan-streets.json`
+  (`scripts/build_yerevan_streets.py`, OpenStreetMap, ODbL — подпись в списке подсказок). Готовый адрес с домом
+  проверяет `GET /geo/resolve` через Nominatim: не чаще 1 запроса в секунду на всё приложение, кэш сырых ответов на
+  30 дней; подсказки по мере ввода через Nominatim запрещены его правилами.
+- **Кросс-сейл в корзине** (`GET /cart/suggestions`, правила — `domain/suggestions.py`): добрать до минимума или
+  бесплатной доставки у того же продавца, следующий оптовый порог, услуги продавца, «вы обычно берёте» (90 дней),
+  сопутствующие категории у других продавцов, возящих в район адреса. Товар — один раз, под самой полезной причиной.
+  **Услуги** — товар с `is_service`: в каталоге не показываются, без торга, предлагаются в корзине.
 - Поиск: `products.search_text` собирается `core/search.build_search_text` из всех языков + транслитерации;
   обновляйте его при каждом изменении названия.
 

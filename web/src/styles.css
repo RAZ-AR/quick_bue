@@ -459,6 +459,36 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .import-done h2 { margin: 0; }
 @media (max-width: 560px) { .import-cols li { grid-template-columns: 1fr; } }
 
+/* --- address field: street suggestions and the map check ------------------------------------------------ */
+.address-field { position: relative; display: grid; gap: 4px; }
+.address-options { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 6px; list-style: none; background: var(--card); border-radius: var(--r-m); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); display: grid; gap: 2px; max-height: 280px; overflow: auto; }
+.address-options li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 10px 12px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ink); }
+.address-options li.on, .address-options li:hover { background: var(--sunken); }
+.address-check { margin: 0; font-size: 13px; font-weight: 600; color: var(--accent-ink); }
+.address-check.ok { color: var(--ink); }
+.address-options li.osm-credit { justify-content: flex-end; padding: 2px 8px; font-size: 10px; font-weight: 500; color: var(--muted); cursor: default; background: none; }
+.contact-field { display: grid; gap: 2px; }
+.suggest { display: grid; gap: 8px; margin-top: 12px; padding: 14px; border-radius: var(--r-m); background: var(--sunken); }
+.suggest-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.suggest-title b { color: var(--accent-ink); font-weight: 800; }
+.picks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--card); }
+.suggest-block .pick { background: var(--sunken); }
+.pick-main { display: grid; gap: 2px; min-width: 0; }
+.pick-name { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ibtn.add { flex: none; background: var(--accent); color: var(--on-accent); }
+.suggest-block { display: grid; gap: 10px; }
+.suggest-block h2 { margin: 0; font-size: 17px; }
+.tier-hint { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+.tier-hint b { color: var(--accent-ink); }
+.tier-hint .pill { border: 0; cursor: pointer; }
+.address-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.address-card { display: grid; gap: 4px; padding: 14px 16px; border-radius: var(--r-m); background: var(--sunken); }
+.address-card-head { display: flex; align-items: center; gap: 8px; }
+.address-card .actions { margin-top: 6px; align-items: center; }
+.address-card .actions .btn, .address-list .actions .btn { flex: none; min-width: 0; }
+.contact-field .link { justify-self: start; }
+
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .actions .btn { flex: 1; min-width: 140px; }
 .qty-edit { display: grid; gap: 4px; width: 104px; }

@@ -72,7 +72,7 @@ class CartView:
 
 
 async def _buyer_address(session: AsyncSession, actor: Actor, address_id: uuid.UUID | None) -> Address | None:
-    stmt = select(Address).where(Address.organization_id == actor.org.id)
+    stmt = select(Address).where(Address.organization_id == actor.org.id, Address.archived_at.is_(None))
     if address_id:
         address = await session.scalar(stmt.where(Address.id == address_id))
         if address is None:

@@ -38,6 +38,7 @@ const L: Record<string, Record<Lang, string>> = {
   to: { hy: 'Բեռնաթափման վայր', ru: 'Пункт разгрузки', en: 'Unloading point' },
   vehicle: { hy: 'Տրանսպորտային միջոց', ru: 'Транспортное средство', en: 'Vehicle' },
   driver: { hy: 'Վարորդ', ru: 'Водитель', en: 'Driver' },
+  receiver: { hy: 'Ընդունող', ru: 'Принимает', en: 'Receiver' },
   handed: { hy: 'Հանձնեց', ru: 'Сдал', en: 'Handed over' },
   accepted: { hy: 'Ընդունեց', ru: 'Принял', en: 'Received' },
   stamp: { hy: 'Կ.Տ.', ru: 'М.П.', en: 'Seal' },
@@ -152,6 +153,7 @@ function Sheet({ doc, lang }: { doc: QDocument; lang: Lang }) {
               <tbody>
                 <tr><th>{lb('from')}</th><td>{p.transport.from ?? ''}</td></tr>
                 <tr><th>{lb('to')}</th><td>{p.transport.to ?? ''}</td></tr>
+                {p.transport.receiver && <tr><th>{lb('receiver')}</th><td>{p.transport.receiver}</td></tr>}
                 <tr><th>{lb('vehicle')}</th><td className="blank">{p.transport.vehicle ?? ''}</td></tr>
                 <tr><th>{lb('driver')}</th><td className="blank">{p.transport.driver ?? ''}</td></tr>
               </tbody>

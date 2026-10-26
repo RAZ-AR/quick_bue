@@ -1,6 +1,9 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AddressField } from '../components/AddressField'
+import { ContactField } from '../components/ContactField'
+import { DeliveryAddresses } from '../components/DeliveryAddresses'
 import { Field, SelectField } from '../components/Field'
 import { FILE_KINDS, FILE_STATUS, problemText, useLang, useT, VERIFICATION } from '../i18n'
 import { api, ApiError, openFile, type FileKind, type OrgDetail, type OrgFile, type TaxRegime, type Verification } from '../lib/api'
@@ -19,6 +22,11 @@ export function Company() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Links like /company#addresses (from the cart) land on that section once it is there
+  useEffect(() => {
+    if (v && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [v])
 
   if (!v) return error ? <p className="error">{error}</p> : <p className="muted">{t('loading')}</p>
   const org = v.organization
@@ -44,6 +52,7 @@ export function Company() {
       </nav>
       <VerificationBlock v={v} reload={load} onChanged={onChanged} />
       <Roles org={org} onChanged={async () => (await load(), await onChanged())} />
+      {org.is_buyer && <DeliveryAddresses />}
       <Requisites org={org} onSaved={load} />
     </div>
   )
@@ -175,19 +184,27 @@ function Requisites({ org, onSaved }: { org: OrgDetail; onSaved: () => Promise<v
   const [form, setForm] = useState(org)
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const lang = useLang()
+  const setValue = (key: keyof OrgDetail, value: string) => (setForm((f) => ({ ...f, [key]: value })), setSaved(false))
   const bind = (key: keyof OrgDetail) => ({
     value: (form[key] as string | null) ?? '',
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => (setForm((f) => ({ ...f, [key]: e.target.value })), setSaved(false)),
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setValue(key, e.target.value),
   })
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true)
+    setErrors({})
     try {
       const { display_name, legal_address, director_name, bank_name, bank_account, phone, email, registration_number, tax_regime } = form
       await api.updateOrg({ display_name, legal_address, director_name, bank_name, bank_account, phone, email, registration_number, tax_regime })
       await onSaved()
       setSaved(true)
+    } catch (err) {
+      const byField: Record<string, string> = {}
+      for (const p of (err as ApiError).problems ?? []) if (typeof p.field === 'string') byField[p.field] = problemText(p.code, lang)
+      setErrors(byField)
     } finally {
       setBusy(false)
     }
@@ -215,13 +232,13 @@ function Requisites({ org, onSaved }: { org: OrgDetail; onSaved: () => Promise<v
           { value: 'micro', label: t('regime_micro') },
         ]}
       />
-      <Field label={t('legal_address')} {...bind('legal_address')} />
+      <AddressField label={t('legal_address')} value={form.legal_address ?? ''} onChange={(v) => setValue('legal_address', v)} />
       <Field label={t('director')} {...bind('director_name')} />
       <Field label={t('reg_number')} {...bind('registration_number')} />
       <Field label={t('bank_name')} {...bind('bank_name')} />
-      <Field label={t('bank_account')} inputMode="numeric" {...bind('bank_account')} />
-      <Field label={t('phone')} inputMode="tel" {...bind('phone')} />
-      <Field label={t('email')} type="email" {...bind('email')} />
+      <ContactField kind="bank_account" label={t('bank_account')} value={form.bank_account ?? ''} onChange={(v) => setValue('bank_account', v)} error={errors.bank_account} />
+      <ContactField kind="phone" label={t('phone')} value={form.phone ?? ''} onChange={(v) => setValue('phone', v)} error={errors.phone} />
+      <ContactField kind="email" label={t('email')} value={form.email ?? ''} onChange={(v) => setValue('email', v)} error={errors.email} />
       <button className="btn primary block" disabled={busy}>
         {saved ? `✓ ${t('saved')}` : t('save')}
       </button>

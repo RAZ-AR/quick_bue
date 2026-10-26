@@ -63,6 +63,7 @@ class ProductIn:
     qty_step: Decimal = Decimal(1)
     in_stock: bool = True
     allow_offers: bool = False
+    is_service: bool = False
     tiers: list[TierIn] = field(default_factory=list)
     autopilot: AutopilotIn | None = None
 
@@ -112,6 +113,9 @@ async def _apply(session: AsyncSession, actor: Actor, product: Product, data: Pr
     product.min_qty = data.min_qty
     product.qty_step = data.qty_step
     product.in_stock = data.in_stock
+    if data.is_service:  # no haggling over a service
+        data.allow_offers = False
+    product.is_service = data.is_service
     product.allow_offers = data.allow_offers
     product.search_text = build_search_text(data.name)
     await session.flush()

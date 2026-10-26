@@ -115,6 +115,20 @@ class AddressOut(ORM):
     label: str
     text: str
     district: str | None
+    contact_name: str | None = None  # who receives the goods
+    contact_phone: str | None = None
+    delivery_notes: str | None = None
+
+
+class AddressIn(BaseModel):
+    label: str = ""
+    text: str
+    district: str | None = None
+    contact_name: str | None = None
+    contact_phone: str | None = None
+    delivery_notes: str | None = None
+    lat: float | None = None
+    lng: float | None = None
 
 
 class CartItemIn(BaseModel):
@@ -162,6 +176,23 @@ class CartOut(BaseModel):
     problems: list[dict]
     can_negotiate: bool
     offer_max_rounds: int  # moves per side in one negotiation
+
+
+class SuggestionOut(BaseModel):
+    """Something to add to the cart and why (services/suggestions.py)."""
+
+    kind: str  # fill_min | fill_free_delivery | tier | service | usual | complement
+    seller: SellerBrief
+    product_id: uuid.UUID
+    name: dict[str, str]
+    unit: Unit
+    price_amd: int  # per unit for this buyer
+    qty: Decimal  # the quantity to put in the cart (for "tier": the whole line)
+    min_qty: Decimal
+    qty_step: Decimal
+    gap_amd: int | None = None  # how much is missing to the minimum or to free delivery
+    saving_amd: int | None = None  # for "tier": saved on the line at the new quantity
+    last_qty: Decimal | None = None  # for "usual"
 
 
 class OrderOfferIn(BaseModel):

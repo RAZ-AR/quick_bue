@@ -7,6 +7,7 @@ from datetime import time
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.contacts import check as check_contacts
 from app.integrations.registry import CompanyInfo, RegistryUnavailable, get_registry, normalize_tin
 from app.models import (
     Address,
@@ -79,10 +80,13 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
         problems.append({"field": "legal_name", "code": "required"})
     if not data.roles:
         problems.append({"field": "roles", "code": "required"})
-    if OrgKind.buyer in data.roles and not (data.delivery_address or "").strip():
-        problems.append({"field": "delivery_address", "code": "required"})
+    contacts, contact_problems = check_contacts(
+        {"phone": data.phone, "email": data.email, "bank_account": data.bank_account}
+    )
+    problems += contact_problems
     if problems:
         raise ValidationFailed(problems)
+    data.phone, data.email, data.bank_account = contacts["phone"], contacts["email"], contacts["bank_account"]
     if await session.scalar(select(Organization.id).where(Organization.tin == tin)):
         # Joining an existing company needs an invite from its owner (not built yet)
         raise Conflict("tin_taken", "this company is already on QB")
@@ -121,7 +125,7 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
     session.add(Membership(user_id=user.id, organization_id=org.id, role=Role.owner))
     if org.is_seller:
         session.add(SellerProfile(organization_id=org.id, cutoff_time=time(16, 0), lead_days=1))
-    if org.is_buyer:
+    if org.is_buyer and (data.delivery_address or "").strip():  # addresses are usually added later
         session.add(
             Address(
                 organization_id=org.id,
@@ -175,6 +179,10 @@ REQUISITE_FIELDS = (
 
 async def update_requisites(session: AsyncSession, actor: Actor, changes: dict) -> Organization:
     actor.require(Action.org_staff)
+    contacts, problems = check_contacts(changes)
+    if problems:
+        raise ValidationFailed(problems)
+    changes = {**changes, **contacts}
     for key, value in changes.items():
         if key in REQUISITE_FIELDS:
             setattr(actor.org, key, value)

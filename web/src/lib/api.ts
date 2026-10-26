@@ -36,7 +36,22 @@ export interface PublicConfig {
   dev_login: boolean; email_login: boolean; google_client_id: string | null; telegram_bot_username: string | null
 }
 
-export interface Address { id: string; label: string; text: string; district: string | null }
+export interface Address {
+  id: string; label: string; text: string; district: string | null
+  contact_name: string | null; contact_phone: string | null; delivery_notes: string | null
+}
+/** Something to add to the cart and why (GET /cart/suggestions) */
+export interface Suggestion {
+  kind: 'fill_min' | 'fill_free_delivery' | 'tier' | 'service' | 'usual' | 'complement'
+  seller: Brief; product_id: string; name: I18nText; unit: Unit; price_amd: number; qty: string
+  min_qty: string; qty_step: string; gap_amd: number | null; saving_amd: number | null; last_qty: string | null
+}
+/** A typed address found on the map (GET /geo/resolve) */
+export interface Place {
+  found: boolean; unavailable: boolean; text: string | null; street: string | null; house: string | null
+  district: string | null; lat: number | null; lng: number | null
+}
+export type AddressInput = Omit<Address, 'id'> & { lat?: number | null; lng?: number | null }
 export interface CartLine {
   product_id: string; name: I18nText; unit: Unit; qty: string; min_qty: string; qty_step: string
   base_price_amd: number; unit_price_amd: number; price_source: PriceSource; line_total_amd: number
@@ -131,7 +146,7 @@ export interface DocPayload {
   kind: DocKind; title: I18nText; number?: string; date?: string; order_number?: string; delivery_date?: string | null
   seller?: Party; buyer?: Party; delivery_address?: string | null; lines?: DocLine[]
   totals?: { subtotal_amd: number; discount_amd: number; delivery_fee_amd: number; total_amd: number; vat_amd: number }
-  vat_note?: string | null; transport?: { from: string | null; to: string | null; vehicle: string | null; driver: string | null }
+  vat_note?: string | null; transport?: { from: string | null; to: string | null; receiver?: string | null; vehicle: string | null; driver: string | null }
   external_id?: string
 }
 export interface QDocument {
@@ -156,7 +171,7 @@ export interface Autopilot {
 export interface SellerProduct {
   id: string; sku: string | null; category_id: string | null; name: I18nText; description: I18nText | null
   unit: Unit; pack_size: string | null; base_price_amd: number; vat_included: boolean; vat_rate_bp: number
-  min_qty: string; qty_step: string; in_stock: boolean; allow_offers: boolean; archived: boolean
+  min_qty: string; qty_step: string; in_stock: boolean; allow_offers: boolean; is_service: boolean; archived: boolean
   tiers: Tier[]; autopilot: Autopilot | null
 }
 export type ProductInput = Omit<SellerProduct, 'id' | 'archived' | 'vat_rate_bp'>
@@ -292,6 +307,14 @@ export const api = {
     request<SellerSettings>('/seller/settings', { method: 'PUT', body: JSON.stringify(body) }),
 
   cart: () => request<Cart>('/cart'),
+  addAddress: (body: AddressInput) => post<Address>('/addresses', body),
+  editAddress: (id: string, body: AddressInput) =>
+    request<Address>(`/addresses/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  removeAddress: (id: string) => request<void>(`/addresses/${id}`, { method: 'DELETE' }),
+  cartSuggestions: (addressId?: string) =>
+    request<Suggestion[]>(`/cart/suggestions${addressId ? `?address_id=${addressId}` : ''}`),
+  geoResolve: (q: string, lang: Lang) =>
+    request<Place>(`/geo/resolve?${new URLSearchParams({ q, lang })}`),
   addresses: () => request<Address[]>('/addresses'),
   setCartItem: (productId: string, qty: string, offerPrice: number | null = null) =>
     request<Cart>(`/cart/items/${productId}`, {

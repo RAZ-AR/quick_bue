@@ -16,7 +16,7 @@ from app.auth.identity import ExternalIdentity
 from app.config import get_settings
 from app.integrations.mailer import get_mailer
 from app.models import AuthProvider, Locale, LoginCode, User, UserIdentity
-from app.platform.errors import DomainError, ValidationFailed
+from app.platform.errors import TooManyRequests, ValidationFailed
 
 MAX_ATTEMPTS = 5
 MAX_CODES_PER_HOUR = 5
@@ -30,10 +30,6 @@ BODY = {
     ),
     "en": "Your QB sign-in code: {code}\nValid for {ttl} minutes. If you did not ask for it, ignore it.",
 }
-
-
-class TooManyRequests(DomainError):
-    status_code = 429
 
 
 def normalize_email(raw: str) -> str:

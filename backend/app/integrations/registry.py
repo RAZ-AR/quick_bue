@@ -129,7 +129,8 @@ class CachedRegistry:
 _redis_client: aioredis.Redis | None = None
 
 
-def _redis() -> aioredis.Redis:
+def shared_redis() -> aioredis.Redis:
+    """One Redis client for the integrations' caches (lazy, short timeouts)."""
     global _redis_client
     if _redis_client is None:
         _redis_client = aioredis.from_url(
@@ -145,5 +146,5 @@ def get_registry() -> Registry:
     if settings.registry_provider == "eregister":
         from app.integrations.eregister import EregisterRegistry
 
-        return CachedRegistry(EregisterRegistry(settings.eregister_url), _redis())
+        return CachedRegistry(EregisterRegistry(settings.eregister_url), shared_redis())
     return NoRegistry()

@@ -1,9 +1,10 @@
 import type React from 'react'
 import { useState } from 'react'
+import { AddressField } from '../components/AddressField'
+import { ContactField } from '../components/ContactField'
 import { Field, SelectField } from '../components/Field'
 import { problemText, useLang, useT } from '../i18n'
 import { api, ApiError, type Lookup, type Mode, type NewOrg, type TaxRegime } from '../lib/api'
-import { DISTRICTS } from '../lib/districts'
 import { useSession } from '../lib/session'
 
 const VENUES = ['cafe', 'restaurant', 'bar', 'bakery', 'hotel', 'catering', 'other']
@@ -25,7 +26,7 @@ export function Onboarding() {
   const t = useT()
   const lang = useLang()
   const [step, setStep] = useState<Step>('role')
-  const [form, setForm] = useState<NewOrg>({ roles: ['buyer'], tin: '', legal_name: '', venue_type: 'cafe', district: 'Kentron' })
+  const [form, setForm] = useState<NewOrg>({ roles: ['buyer'], tin: '', legal_name: '', venue_type: 'cafe' })
   const [lookup, setLookup] = useState<Lookup | null>(null)
   const [busy, setBusy] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -179,10 +180,11 @@ export function Onboarding() {
               { value: 'micro', label: t('regime_micro') },
             ]}
           />
-          <Field label={t('legal_address')} {...bind('legal_address')} />
+          <AddressField label={t('legal_address')} value={form.legal_address ?? ''} onChange={(v) => set({ legal_address: v })} error={errors.legal_address} />
           <Field label={t('director')} {...bind('director_name')} />
           <Field label={t('reg_number')} {...bind('registration_number')} />
-          <Field label={t('phone')} inputMode="tel" {...bind('phone')} />
+          <ContactField kind="phone" label={t('phone')} value={form.phone ?? ''} onChange={(v) => set({ phone: v })} error={errors.phone} />
+          <ContactField kind="email" label={t('email')} value={form.email ?? ''} onChange={(v) => set({ email: v })} error={errors.email} />
           {form.roles.includes('buyer') && (
             <>
               <SelectField
@@ -191,19 +193,19 @@ export function Onboarding() {
                 onChange={(e) => set({ venue_type: e.target.value })}
                 options={VENUES.map((v) => ({ value: v, label: VENUE_LABEL[v][lang] }))}
               />
-              <Field label={t('delivery_address')} required {...bind('delivery_address')} />
-              <SelectField
-                label={t('district')}
-                value={form.district ?? ''}
-                onChange={(e) => set({ district: e.target.value })}
-                options={DISTRICTS.map((d) => ({ value: d, label: d }))}
-              />
+              <p className="muted small">{t('addresses_later')}</p>
             </>
           )}
           {form.roles.includes('seller') && (
             <>
               <Field label={t('bank_name')} {...bind('bank_name')} />
-              <Field label={t('bank_account')} inputMode="numeric" {...bind('bank_account')} />
+              <ContactField
+                kind="bank_account"
+                label={t('bank_account')}
+                value={form.bank_account ?? ''}
+                onChange={(v) => set({ bank_account: v })}
+                error={errors.bank_account}
+              />
             </>
           )}
           {error && <p className="error">{error}</p>}

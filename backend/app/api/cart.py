@@ -3,11 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
 
 from app.auth.deps import CurrentActor, Session
 from app.config import get_settings
-from app.models import Address
 from app.platform import idempotency
 from app.platform.authz import Action
 from app.platform.clock import utcnow
@@ -19,8 +17,10 @@ from app.schemas import (
     CartOut,
     CheckoutIn,
     SellerBrief,
+    SuggestionOut,
 )
 from app.services import cart as cart_svc
+from app.services import suggestions as suggestion_svc
 from app.services.checkout import checkout as do_checkout
 
 from .orders import order_out
@@ -78,12 +78,28 @@ async def _cart_out(session: Session, actor: CurrentActor, address_id: uuid.UUID
     )
 
 
-@router.get("/addresses", response_model=list[AddressOut])
-async def addresses(session: Session, actor: CurrentActor) -> list[Address]:
-    rows = await session.scalars(
-        select(Address).where(Address.organization_id == actor.org.id).order_by(Address.created_at)
-    )
-    return list(rows)
+@router.get("/cart/suggestions", response_model=list[SuggestionOut])
+async def cart_suggestions(
+    session: Session, actor: CurrentActor, address_id: uuid.UUID | None = None
+) -> list[SuggestionOut]:
+    items = await suggestion_svc.for_cart(session, actor, utcnow(), address_id)
+    return [
+        SuggestionOut(
+            kind=s.kind,
+            seller=SellerBrief(id=s.seller.id, display_name=s.seller.display_name),
+            product_id=s.product.id,
+            name=s.product.name,
+            unit=s.product.unit,
+            price_amd=s.price_amd,
+            qty=s.qty,
+            min_qty=s.product.min_qty,
+            qty_step=s.product.qty_step,
+            gap_amd=s.gap_amd,
+            saving_amd=s.saving_amd,
+            last_qty=s.last_qty,
+        )
+        for s in items
+    ]
 
 
 @router.get("/cart", response_model=CartOut)

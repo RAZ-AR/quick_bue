@@ -51,6 +51,7 @@ class ProductIn(BaseModel):
     qty_step: Decimal = Decimal(1)
     in_stock: bool = True
     allow_offers: bool = False
+    is_service: bool = False
     tiers: list[TierIn] = []
     autopilot: AutopilotIO | None = None
 
@@ -70,6 +71,7 @@ class SellerProductOut(ORM):
     qty_step: Decimal
     in_stock: bool
     allow_offers: bool
+    is_service: bool
     archived: bool
     tiers: list[TierOut]
     autopilot: AutopilotIO | None
@@ -106,6 +108,7 @@ def _out(p: Product, rule: OfferRule | None) -> SellerProductOut:
         qty_step=p.qty_step,
         in_stock=p.in_stock,
         allow_offers=p.allow_offers,
+        is_service=p.is_service,
         archived=p.archived_at is not None,
         tiers=[
             TierOut(min_qty=t.min_qty, price_amd=t.price_amd)

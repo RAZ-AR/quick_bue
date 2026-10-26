@@ -25,6 +25,7 @@ const EMPTY: ProductInput = {
   qty_step: '1',
   in_stock: true,
   allow_offers: false,
+  is_service: false,
   tiers: [],
   autopilot: null,
 }
@@ -94,6 +95,7 @@ export function SellerProducts() {
                 </div>
                 <div className="meta">
                   {p.allow_offers && <span className="pill haggle">⇄ {t('haggle')}</span>}
+                  {p.is_service && <span className="pill plain">{t('service_badge')}</span>}
                   {p.autopilot?.enabled && <span className="pill saving">⚡ {t('autopilot')}</span>}
                   {!p.in_stock && <span className="pill plain">{t('out_of_stock')}</span>}
                 </div>
@@ -215,7 +217,12 @@ function ProductEditor({
         </fieldset>
 
         <label className="check">
-          <input type="checkbox" checked={f.allow_offers} onChange={(e) => set({ allow_offers: e.target.checked, autopilot: e.target.checked ? (f.autopilot ?? DEFAULT_AUTOPILOT) : null })} />{' '}
+          <input type="checkbox" checked={f.is_service} onChange={(e) => set({ is_service: e.target.checked, allow_offers: e.target.checked ? false : f.allow_offers })} />{' '}
+          {t('is_service_label')}
+        </label>
+        {f.is_service && <p className="muted small">{t('is_service_hint')}</p>}
+        <label className="check">
+          <input type="checkbox" disabled={f.is_service} checked={f.allow_offers} onChange={(e) => set({ allow_offers: e.target.checked, autopilot: e.target.checked ? (f.autopilot ?? DEFAULT_AUTOPILOT) : null })} />{' '}
           ⇄ {t('allow_offers_label')}
         </label>
         {f.allow_offers && (

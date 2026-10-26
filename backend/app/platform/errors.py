@@ -30,6 +30,10 @@ class Conflict(DomainError):
     status_code = 409
 
 
+class TooManyRequests(DomainError):
+    status_code = 429
+
+
 class ValidationFailed(DomainError):
     """Business validation failed; details["problems"] lists what to fix."""
 

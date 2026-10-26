@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # (name, status, registration number, address; cached a day), "none" = manual entry only.
     registry_provider: Literal["demo", "eregister", "none"] = "demo"
     eregister_url: str = "https://e-register.moj.am"
+    # Address check (house -> district) via OpenStreetMap Nominatim; empty disables it
+    geocoder_url: str = "https://nominatim.openstreetmap.org"
 
     # Uploaded verification files (local volume; S3/R2 later)
     media_dir: str = "media"

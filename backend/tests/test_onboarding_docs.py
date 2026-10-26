@@ -129,10 +129,16 @@ async def test_files_are_private(client):
 
 async def test_buyer_signup_rules(client):
     me = await register(client)
+    # Contacts are checked; the delivery address is added later (several, from the company cabinet)
     r = await client.post(
-        "/organizations", headers=me, json={"roles": ["buyer"], "tin": "02598301", "legal_name": "Cascade"}
+        "/organizations",
+        headers=me,
+        json={"roles": ["buyer"], "tin": "02598301", "legal_name": "Cascade", "phone": "123", "email": "a@b"},
     )
-    assert r.json()["details"]["problems"][0]["field"] == "delivery_address"
+    assert {(p["field"], p["code"]) for p in r.json()["details"]["problems"]} == {
+        ("phone", "bad_phone"),
+        ("email", "bad_email"),
+    }
     # A TIN already on QB
     r = await client.post(
         "/organizations",
