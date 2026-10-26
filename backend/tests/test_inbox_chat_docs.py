@@ -156,6 +156,40 @@ async def test_notification_settings_and_telegram_link(client, sessionmaker):
         svc.read_telegram_link_token(old)
 
 
+def _signed_widget(bot_token: str, **user) -> dict:
+    """A Telegram Login Widget payload signed like Telegram does."""
+    import hashlib
+    import hmac
+    import time
+
+    data = {**user, "auth_date": int(time.time())}
+    check = "\n".join(f"{k}={data[k]}" for k in sorted(data))
+    secret = hashlib.sha256(bot_token.encode()).digest()
+    return {**data, "hash": hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()}
+
+
+async def test_telegram_sign_in_finds_user_who_linked_the_bot(client, sessionmaker, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "telegram_bot_token", "123:test")
+    nova = await login(client, "nova@qb.local")
+    nova_id = (await client.get("/me", headers=nova)).json()["id"]
+    token = (await client.post("/me/telegram/link", headers=nova)).json()["url"].split("start=")[1]
+    async with sessionmaker() as s:
+        await svc.link_telegram(s, token, 4242)
+        await s.commit()
+
+    r = await client.post("/auth/telegram", json=_signed_widget("123:test", id=4242, first_name="Nova"))
+    assert r.status_code == 200, r.text
+    me = (await client.get("/me", headers={"Authorization": f"Bearer {r.json()['access_token']}"})).json()
+    assert me["id"] == nova_id and me["memberships"]
+
+    # A Telegram account nobody linked is a new user
+    r = await client.post("/auth/telegram", json=_signed_widget("123:test", id=5151, first_name="Ani"))
+    other = (await client.get("/me", headers={"Authorization": f"Bearer {r.json()['access_token']}"})).json()
+    assert other["id"] != nova_id and other["memberships"] == []
+
+
 async def test_document_register(client, sessionmaker):
     nova, pack = await login(client, "nova@qb.local"), await login(client, "pack@qb.local")
     await put(client, nova, await product_id(client, nova, "Paper cup 250 ml"), 10)

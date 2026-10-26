@@ -105,6 +105,9 @@ async def login_or_register(session: AsyncSession, ident: ExternalIdentity) -> U
         return user
 
     user = await session.scalar(select(User).where(User.email == ident.email)) if ident.email else None
+    if user is None and ident.provider == AuthProvider.telegram:
+        # Linked Telegram for notifications through the bot earlier: the same person, not a new account
+        user = await session.scalar(select(User).where(User.telegram_id == int(ident.external_id)))
     if user is None:
         name = (
             ident.display_name or (ident.email.split("@")[0] if ident.email else "") or ident.username or "QB"

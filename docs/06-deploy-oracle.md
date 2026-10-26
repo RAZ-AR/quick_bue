@@ -59,7 +59,7 @@ sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|;s|^POSTGRES_PASSWOR
 nano .env        # DOMAIN, WEB_APP_URL, CORS_ORIGINS, MAIL_*, GOOGLE_CLIENT_ID …
 ```
 
-Репозиторий приватный — клонируйте по SSH (`git@github.com:RAZ-AR/quick_bue.git`) с ключом, добавленным в GitHub
+Если репозиторий приватный — клонируйте по SSH (`git@github.com:RAZ-AR/quick_bue.git`) с ключом, добавленным в GitHub
 (*Settings → Deploy keys*, достаточно read-only).
 
 ## 4. Запуск
@@ -82,7 +82,8 @@ docker compose -f docker-compose.prod.yml run --rm api python -m app.bootstrap y
 | Google | Google Cloud Console → Credentials → OAuth client ID (Web); Authorized JavaScript origins = `https://<адрес>` | `GOOGLE_CLIENT_ID` |
 | Telegram | @BotFather → новый бот → токен; `/setdomain` → `<адрес>` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` |
 
-После правки `.env`: `docker compose -f docker-compose.prod.yml up -d`.
+После правки `.env`: `docker compose -f docker-compose.prod.yml up -d`. С Telegram запускайте и бота (уведомления и
+привязка чата): `docker compose -f docker-compose.prod.yml --profile bot up -d`.
 
 ## 6. Обновление, логи, резервные копии
 
