@@ -4,14 +4,19 @@ import uuid
 from dataclasses import asdict
 from datetime import time
 from decimal import Decimal
+from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile
 from pydantic import BaseModel
 
 from app.auth.deps import CurrentActor, Session
+from app.core.spreadsheet import UnreadableFile, read_table
+from app.domain import price_import as imp
 from app.models import OfferRule, Product, Unit
 from app.platform.clock import utcnow
+from app.platform.errors import ValidationFailed
 from app.schemas import ORM, TierOut
+from app.services import price_import as import_svc
 from app.services import seller_catalog as svc
 
 router = APIRouter(prefix="/seller", tags=["seller"])
@@ -186,3 +191,102 @@ def _settings_out(profile, zones) -> SettingsIO:
         offer_response_hours=profile.offer_response_hours,
         zones=[ZoneIO(district=z.district, weekdays=z.weekdays) for z in zones],
     )
+
+
+# --- price list import --------------------------------------------------------------------------------------
+
+
+class ParsedTable(BaseModel):
+    headers: list[str]
+    rows: list[list[Any]]
+    mapping: dict[int, imp.Field]  # guessed: column index -> field
+
+
+class ImportBody(BaseModel):
+    mapping: dict[int, imp.Field]
+    rows: list[list[Any]]
+    default_unit: Unit | None = None
+    missing_out_of_stock: bool = False
+
+
+class ChangeOut(BaseModel):
+    field: str
+    old: Any
+    new: Any
+
+
+class ImportItemOut(BaseModel):
+    action: imp.Action
+    line: int | None
+    product_id: uuid.UUID | None
+    sku: str | None
+    name: dict[str, str]
+    price_amd: int | None
+    unit: Unit | None
+    changes: list[ChangeOut]
+    problems: list[str]
+    warnings: list[str]
+
+
+class ImportResult(BaseModel):
+    counts: dict[str, int]
+    items: list[ImportItemOut]
+
+
+def _json(value: Any) -> Any:
+    return str(value) if isinstance(value, Decimal) else value
+
+
+def _result(items: list[imp.Item]) -> ImportResult:
+    counts = {a.value: 0 for a in imp.Action}
+    out = []
+    for it in items:
+        counts[it.action.value] += 1
+        r = it.row
+        out.append(
+            ImportItemOut(
+                action=it.action,
+                line=it.line,
+                product_id=it.product_id,
+                sku=r.sku if r else None,
+                name=r.name if r else {},
+                price_amd=r.price_amd if r else None,
+                unit=r.unit if r else None,
+                changes=[ChangeOut(field=c.field, old=_json(c.old), new=_json(c.new)) for c in it.changes],
+                problems=it.problems,
+                warnings=it.warnings,
+            )
+        )
+    return ImportResult(counts=counts, items=out)
+
+
+def _import_in(body: ImportBody) -> import_svc.ImportIn:
+    return import_svc.ImportIn(
+        mapping=body.mapping,
+        rows=body.rows,
+        default_unit=body.default_unit,
+        missing_out_of_stock=body.missing_out_of_stock,
+    )
+
+
+@router.post("/import/parse", response_model=ParsedTable)
+async def parse_price_list(file: UploadFile, actor: CurrentActor):
+    svc._seller(actor)
+    try:
+        headers, rows = read_table(await file.read(), file.filename or "", imp.MAX_ROWS)
+    except UnreadableFile as e:
+        raise ValidationFailed([{"field": "file", "code": e.code}]) from e
+    texts = [[str(c) if c is not None else "" for c in r] for r in rows]
+    return ParsedTable(headers=headers, rows=rows, mapping=imp.guess_mapping(headers, texts))
+
+
+@router.post("/import/preview", response_model=ImportResult)
+async def preview_import(body: ImportBody, session: Session, actor: CurrentActor):
+    return _result(await import_svc.preview(session, actor, _import_in(body)))
+
+
+@router.post("/import/apply", response_model=ImportResult)
+async def apply_import(body: ImportBody, session: Session, actor: CurrentActor):
+    items = await import_svc.apply(session, actor, _import_in(body))
+    await session.commit()
+    return _result(items)

@@ -157,6 +157,22 @@ export interface SellerProduct {
   tiers: Tier[]; autopilot: Autopilot | null
 }
 export type ProductInput = Omit<SellerProduct, 'id' | 'archived' | 'vat_rate_bp'>
+
+// Price list import (Excel / CSV)
+export type ImportField =
+  | 'sku' | 'name_hy' | 'name_ru' | 'name_en' | 'price' | 'unit' | 'in_stock' | 'stock_qty' | 'min_qty' | 'pack_size'
+export type ImportCell = string | number | boolean | null
+export interface ParsedTable { headers: string[]; rows: ImportCell[][]; mapping: Record<string, ImportField> }
+export interface ImportBody {
+  mapping: Record<string, ImportField>; rows: ImportCell[][]; default_unit: Unit | null; missing_out_of_stock: boolean
+}
+export type ImportAction = 'create' | 'update' | 'same' | 'error' | 'out_of_stock'
+export interface ImportItem {
+  action: ImportAction; line: number | null; product_id: string | null; sku: string | null; name: I18nText
+  price_amd: number | null; unit: Unit | null; changes: { field: string; old: unknown; new: unknown }[]
+  problems: string[]; warnings: string[]
+}
+export interface ImportResult { counts: Record<ImportAction, number>; items: ImportItem[] }
 export interface SellerSettings {
   min_order_amd: number; cutoff_time: string; lead_days: number; delivery_fee_amd: number
   free_delivery_from_amd: number | null; offer_response_hours: number
@@ -257,6 +273,13 @@ export const api = {
   // seller cabinet
   sellerProducts: (archived = false) => request<SellerProduct[]>(`/seller/products?archived=${archived}`),
   createProduct: (body: ProductInput) => post<SellerProduct>('/seller/products', body),
+  parsePriceList: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<ParsedTable>('/seller/import/parse', { method: 'POST', body: form })
+  },
+  previewImport: (body: ImportBody) => post<ImportResult>('/seller/import/preview', body),
+  applyImport: (body: ImportBody) => post<ImportResult>('/seller/import/apply', body),
   updateProduct: (id: string, body: ProductInput) =>
     request<SellerProduct>(`/seller/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   archiveProduct: (id: string, archived: boolean) =>

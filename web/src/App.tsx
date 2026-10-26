@@ -19,6 +19,7 @@ import { Orders } from './pages/Orders'
 import { Documents } from './pages/Documents'
 import { Notifications } from './pages/Notifications'
 import { PrintBatch, PrintDocument } from './pages/PrintDocument'
+import { PriceImport } from './pages/PriceImport'
 import { SellerProducts } from './pages/SellerProducts'
 import { SellerSettings } from './pages/SellerSettings'
 
@@ -207,6 +208,7 @@ function routesFor(state: State) {
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/seller/products" element={<SellerProducts />} />
+          <Route path="/seller/import" element={<PriceImport />} />
           <Route path="/seller/settings" element={<SellerSettings />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/notifications" element={<Notifications />} />

@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AutopilotEditor, DEFAULT_AUTOPILOT } from '../components/AutopilotEditor'
 import { Field, SelectField } from '../components/Field'
 import { Sheet } from '../components/Sheet'
@@ -52,9 +53,14 @@ export function SellerProducts() {
     <div className="page" style={{ display: 'grid', gap: 12 }}>
       <div className="page-head">
         <h1 className="page-title">{t('tab_products')}</h1>
-        <button className="btn primary" onClick={() => setEditing('new')}>
-          + {t('new_product')}
-        </button>
+        <div className="actions">
+          <Link className="btn ghost" to="/seller/import">
+            ↑ {t('import_button')}
+          </Link>
+          <button className="btn primary" onClick={() => setEditing('new')}>
+            + {t('new_product')}
+          </button>
+        </div>
       </div>
       {!canSell && <p className="notice">{t('products_hidden_until_verified')}</p>}
       <div className="chips" style={{ paddingTop: 0 }}>

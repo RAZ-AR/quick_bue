@@ -68,7 +68,7 @@ backend/app/
 │                  # автопилот), commission — без базы и HTTP; из app.models берут только enum
 ├── services/      # работа с базой: cart, checkout, orders, negotiation, agreements, prices, documents,
 │                  # onboarding (регистрация по ИНН, роли), verification (файлы и модерация),
-│                  # seller_catalog (свои товары и условия доставки) — без commit
+│                  # seller_catalog (свои товары и условия доставки), price_import (прайс из Excel/CSV) — без commit
 ├── integrations/  # порты внешних систем: registry (demo | none — открытого API реестра РА нет),
 │                  # mailer (console | resend) для кодов входа
 ├── platform/      # authz (Actor + таблица прав), errors, clock, outbox, idempotency, storage (файлы в MEDIA_DIR)
@@ -117,6 +117,11 @@ backend/app/
   одинаковыми. Новый тип события — добавить в `KINDS`. Адреса `@qb.local` писем не получают.
 - **Чат по заказу** — `order_messages`, событие `order.message`; чтение чата гасит его уведомления.
 - **Telegram:** привязка через `t.me/<бот>?start=<токен>` (подписанный, 15 минут), бот в профиле compose `bot`.
+- **Импорт прайса** (`/seller/import`): `core/spreadsheet.read_table` читает .xlsx (openpyxl) или .csv (`;`/`,`, UTF-8
+  или cp1251), `domain/price_import` угадывает колонки (заголовки hy/ru/en и ArmSoft) и строит план, сервис
+  применяет его без хранения файла — клиент присылает строки дважды (предпросмотр и применение). Сопоставление — по
+  артикулу (код ArmSoft), без артикула или у товара без артикула — по точному названию; повторная загрузка того же
+  файла ничего не меняет. Строки с ошибками пропускаются.
 - Поиск: `products.search_text` собирается `core/search.build_search_text` из всех языков + транслитерации;
   обновляйте его при каждом изменении названия.
 

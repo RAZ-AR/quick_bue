@@ -22,6 +22,7 @@ dependencies = [
     "python-multipart>=0.0.9",  # file uploads (verification documents)
     "google-auth>=2.34",  # Sign in with Google: ID token verification
     "requests>=2.32",  # transport for google-auth
+    "openpyxl>=3.1",  # price lists from Excel (.xlsx)
 ]
 
 [project.optional-dependencies]
