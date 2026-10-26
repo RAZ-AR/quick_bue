@@ -21,6 +21,7 @@ export function PriceDial({
   presets = [3, 5, 7, 10],
   showSaving = true,
   autoCommit = false,
+  likelyFrom = null,
 }: {
   reference: number // price the discount is measured from
   qty: number
@@ -33,6 +34,8 @@ export function PriceDial({
   showSaving?: boolean
   /** Treat the suggested starting price as chosen (answering an offer), instead of waiting for a touch */
   autoCommit?: boolean
+  /** Prices from here up are likely accepted at once (the seller shared it); draws the zones */
+  likelyFrom?: number | null
 }) {
   const t = useT()
   const lo = Math.ceil(min / STEP) * STEP
@@ -92,6 +95,16 @@ export function PriceDial({
         onPointerUp={() => onCommit(price)}
         onKeyUp={() => onCommit(price)}
       />
+      {likelyFrom !== null && likelyFrom > lo && likelyFrom <= hi && (
+        <div className="dial-zone" aria-hidden>
+          <i style={{ left: `${((likelyFrom - lo) / Math.max(1, hi - lo)) * 100}%` }} />
+        </div>
+      )}
+      {likelyFrom !== null && (
+        <div className={price >= likelyFrom ? 'dial-zone-text likely' : 'dial-zone-text'}>
+          {price >= likelyFrom ? t('zone_likely') : t('zone_maybe')}
+        </div>
+      )}
       <div className="dial-scale">
         <span>{amd(lo)}</span>
         <span>

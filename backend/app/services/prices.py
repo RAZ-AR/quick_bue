@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.domain.negotiation import AutoRule
+from app.domain.negotiation import AutoRule, accept_discount_bp
 from app.domain.pricing import Tier, UnitPrice, resolve_unit_price
 from app.models import (
     AgreementStatus,
@@ -82,6 +82,15 @@ class RuleBook:
         if rule is not None and rule.min_line_amd is not None:
             return rule.min_line_amd
         return get_settings().offer_min_line_amd
+
+    def hint_bp(self, product: Product) -> int | None:
+        """The auto-accept discount, when the seller agreed to show it to buyers."""
+        r = self.rule_for(product)
+        if r is None or not r.enabled or not r.share_hint or r.only_regulars:
+            return None
+        rule = self.auto_rule(product)
+        bp = accept_discount_bp(rule, product.base_price_amd) if rule else None
+        return bp or None
 
     def auto_rule(self, product: Product) -> AutoRule | None:
         r = self.rule_for(product)

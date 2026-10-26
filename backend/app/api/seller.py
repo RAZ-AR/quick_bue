@@ -1,6 +1,7 @@
 """Seller cabinet API: products and delivery terms. Acts in seller mode whatever the app's current mode is."""
 
 import uuid
+from dataclasses import asdict
 from datetime import time
 from decimal import Decimal
 
@@ -22,11 +23,14 @@ class TierIn(BaseModel):
 
 
 class AutopilotIO(BaseModel):
+    """Discounts in basis points from the line price (300 = 3%)."""
+
     enabled: bool = True
-    floor_price_amd: int | None = None
-    accept_price_amd: int | None = None
+    accept_discount_bp: int | None = None
+    max_discount_bp: int | None = None
     auto_counter: bool = True
     min_line_amd: int | None = None
+    share_hint: bool = False
 
 
 class ProductIn(BaseModel):
@@ -102,15 +106,7 @@ def _out(p: Product, rule: OfferRule | None) -> SellerProductOut:
             TierOut(min_qty=t.min_qty, price_amd=t.price_amd)
             for t in sorted(p.tiers, key=lambda t: t.min_qty)
         ],
-        autopilot=AutopilotIO(
-            enabled=rule.enabled,
-            floor_price_amd=rule.floor_price_amd,
-            accept_price_amd=rule.auto_accept_price_amd,
-            auto_counter=rule.auto_counter,
-            min_line_amd=rule.min_line_amd,
-        )
-        if rule
-        else None,
+        autopilot=AutopilotIO(**asdict(svc.autopilot_out(rule, p.base_price_amd))) if rule else None,
     )
 
 

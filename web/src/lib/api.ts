@@ -41,15 +41,17 @@ export interface CartLine {
   product_id: string; name: I18nText; unit: Unit; qty: string; min_qty: string; qty_step: string
   base_price_amd: number; unit_price_amd: number; price_source: PriceSource; line_total_amd: number
   offer_price_amd: number | null; offers_allowed: boolean; offer_min_line_amd: number; problems: string[]
+  offer_hint_bp: number | null
 }
 export interface CartGroup {
   seller: Brief; lines: CartLine[]; subtotal_amd: number; delivery_fee_amd: number; total_amd: number
   min_order_amd: number; missing_amd: number; free_delivery_from_amd: number | null
-  delivery_date: string | null; problems: string[]
+  delivery_date: string | null; problems: string[]; offer_response_hours: number
 }
 export interface Cart {
   groups: CartGroup[]; total_amd: number; address: Address | null
   problems: { code: string; product_id?: string; seller_id?: string }[]; can_negotiate: boolean
+  offer_max_rounds: number
 }
 
 export interface OrderLine {
@@ -77,6 +79,13 @@ export interface Order {
   next_step: NextStep | null; deadline: string | null; saving_amd: number
   events: { type: string; at: string; auto: boolean }[]
   unread_messages: number
+  client: ClientProfile | null
+}
+/** The buyer's history with this seller; only the seller gets it */
+export interface ClientProfile {
+  source: 'seller_invited' | 'platform' | null; orders: number; accepted_orders: number; avg_order_amd: number
+  first_order_at: string | null; last_order_at: string | null
+  negotiated_orders: number; agreed_orders: number; avg_discount_bp: number
 }
 export interface OrderListItem {
   id: string; number: string; status: OrderStatus; counterparty: Brief; total_amd: number
@@ -136,9 +145,10 @@ export interface NewOrg {
 export interface LineAnswer { order_line_id: string; decision: Decision; price_amd?: number }
 
 export interface Tier { min_qty: string; price_amd: number }
+/** Discounts in basis points from the line price (300 = 3%) */
 export interface Autopilot {
-  enabled: boolean; floor_price_amd: number | null; accept_price_amd: number | null
-  auto_counter: boolean; min_line_amd: number | null
+  enabled: boolean; accept_discount_bp: number | null; max_discount_bp: number | null
+  auto_counter: boolean; min_line_amd: number | null; share_hint: boolean
 }
 export interface SellerProduct {
   id: string; sku: string | null; category_id: string | null; name: I18nText; description: I18nText | null

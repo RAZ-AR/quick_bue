@@ -36,6 +36,7 @@ class CartLine:
     unit_price: UnitPrice
     line_total_amd: int
     offer_min_line_amd: int
+    offer_hint_bp: int | None = None  # seller's shared auto-accept discount
     problems: list[str] = field(default_factory=list)
 
 
@@ -131,7 +132,12 @@ async def build_cart(
             qty = Decimal(item.qty)
             unit = prices.price(product, qty)
             line = CartLine(
-                item, product, unit, line_total_amd(unit.amount_amd, qty), rules.min_line_amd(product)
+                item,
+                product,
+                unit,
+                line_total_amd(unit.amount_amd, qty),
+                rules.min_line_amd(product),
+                rules.hint_bp(product),
             )
             if product.archived_at is not None:
                 line.problems.append("product_archived")

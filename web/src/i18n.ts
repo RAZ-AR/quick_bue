@@ -313,13 +313,100 @@ export const TEXTS = {
   from_qty: { hy: 'Սկսած քանակից', ru: 'От количества', en: 'From qty' },
   autopilot_title: { hy: 'Ավտոպատասխան սակարկմանը', ru: 'Автоответ на торг', en: 'Offer autopilot' },
   autopilot_hint: {
-    hy: 'Գնորդը չի տեսնում այս թվերը',
-    ru: 'Покупатель этих чисел не видит',
-    en: 'Buyers never see these numbers',
+    hy: 'Աշխատում է տողի գնի տոկոսով՝ նաև մեծածախ և պայմանագրային գների համար',
+    ru: 'Считается в процентах от цены строки — и для оптовых, и для контрактных цен',
+    en: 'Works as a share of the line price, volume and contract prices included',
   },
-  floor_price: { hy: 'Ցածր՝ մերժել', ru: 'Ниже — отказ', en: 'Below — decline' },
-  accept_price: { hy: 'Սկսած՝ ընդունել', ru: 'От — принять', en: 'From — accept' },
-  auto_counter: { hy: 'Միջակայքում՝ հակաառաջարկ', ru: 'Между — встречная цена', en: 'In between — counter' },
+  ap_off: {
+    hy: 'Առանց ավտոպատասխանի յուրաքանչյուր առաջարկին պատասխանում եք դուք',
+    ru: 'Без автоответа на каждое предложение отвечаете вы',
+    en: 'Without the autopilot you answer every offer yourself',
+  },
+  ap_accept: { hy: 'Անմիջապես համաձայնել զեղչին մինչև', ru: 'Сразу соглашаться на скидку до', en: 'Agree at once to a discount up to' },
+  ap_max: { hy: 'Մերժել, եթե խնդրում են ավելի քան', ru: 'Отказывать, если просят больше', en: 'Decline if they ask for more than' },
+  ap_no_max: { hy: 'Չմերժել', ru: 'Не отказывать', en: 'Never decline' },
+  auto_counter: { hy: 'Միջակայքում՝ հակաառաջարկ մեջտեղում', ru: 'Между ними — встречная цена посередине', en: 'In between — counter halfway' },
+  ap_share: {
+    hy: 'Ցույց տալ գնորդներին, թե ինչ զեղչի եք անմիջապես համաձայնում',
+    ru: 'Показывать покупателям, на какую скидку вы соглашаетесь сразу',
+    en: 'Show buyers the discount you agree to at once',
+  },
+  ap_share_note: {
+    hy: 'Այդպես ավելի հաճախ են առաջարկում և ճիշտ միջակայքում։ Մերժման շեմը գնորդը չի տեսնի։',
+    ru: 'Так предлагают чаще и сразу в нужном диапазоне. Порог отказа покупатель не увидит.',
+    en: 'Buyers then offer more often and in the right range. They never see where you decline.',
+  },
+  ap_examples: { hy: 'Ինչպես կպատասխանի, երբ գինը', ru: 'Как ответит автопилот при цене', en: 'How the autopilot answers at a price of' },
+  ap_offer: { hy: 'Առաջարկեն', ru: 'Предложат', en: 'Offer' },
+  ap_will_accept: { hy: 'կընդունի', ru: 'примет', en: 'accepts' },
+  ap_will_counter: { hy: 'հակաառաջարկ', ru: 'встречная', en: 'counters' },
+  ap_will_decline: { hy: 'կմերժի, գինը կմնա', ru: 'откажет, цена останется', en: 'declines, price stays' },
+  ap_will_manual: { hy: 'որոշում եք դուք', ru: 'решаете вы', en: 'you decide' },
+
+  // haggling hints
+  client_title: { hy: 'Հաճախորդ', ru: 'Клиент', en: 'Client' },
+  client_new: { hy: 'Առաջին պատվերն է ձեզ մոտ', ru: 'Первый заказ у вас', en: 'First order with you' },
+  client_seller_invited: { hy: 'Ձեր հաճախորդն է՝ առանց միջնորդավճարի', ru: 'Ваш клиент — без комиссии', en: 'Your client — no commission' },
+  client_platform: { hy: 'Եկել է QB-ի միջոցով', ru: 'Пришёл через QB', en: 'Came through QB' },
+  client_orders: { hy: 'պատվեր', ru: 'заказов', en: 'orders' },
+  client_avg: { hy: 'միջին պատվեր', ru: 'средний чек', en: 'average order' },
+  client_since: { hy: 'սկսած', ru: 'с', en: 'since' },
+  client_haggled: { hy: 'սակարկել է', ru: 'торговался', en: 'haggled' },
+  client_agreed: { hy: 'համաձայնել եք', ru: 'сошлись', en: 'agreed' },
+  client_avg_discount: { hy: 'միջին զեղչ', ru: 'средняя скидка', en: 'average discount' },
+  client_never_haggled: { hy: 'Նախկինում չի սակարկել', ru: 'Раньше не торговался', en: 'Never haggled before' },
+  you_give: { hy: 'Զիջում եք', ru: 'Вы уступаете', en: 'You give' },
+  you_save: { hy: 'Խնայում եք', ru: 'Вы экономите', en: 'You save' },
+  price_stays: { hy: 'Գինը կմնա', ru: 'Цена останется', en: 'Price stays' },
+  halfway: { hy: 'Մեջտեղում', ru: 'Посередине', en: 'Halfway' },
+  counter_range: { hy: 'Հակաառաջարկ՝', ru: 'Встречная —', en: 'Counter:' },
+  your_last: { hy: 'ձեր նախորդը', ru: 'ваша прошлая', en: 'your last' },
+  their_offer: { hy: 'նրանց գինը', ru: 'их цена', en: 'their price' },
+  last_move: {
+    hy: 'Սա ձեր վերջին քայլն է. հետո միայն ընդունել կամ մերժել',
+    ru: 'Это ваш последний ход: дальше только принять или отклонить',
+    en: 'This is your last move: after it, only accept or decline',
+  },
+  no_answer_cancels: {
+    hy: 'Եթե ժամկետում չպատասխանեք, պատվերը կչեղարկվի',
+    ru: 'Не ответите вовремя — заказ отменится',
+    en: 'No answer in time cancels the order',
+  },
+  howto_title: { hy: 'Ինչպես է աշխատում սակարկումը', ru: 'Как работает торг', en: 'How offers work' },
+  howto_link: { hy: 'Ինչպե՞ս է աշխատում', ru: 'Как это работает?', en: 'How does it work?' },
+  howto_1: {
+    hy: 'Առաջարկեք ձեր գինը. այն կուղարկվի վաճառողին պատվերի հետ։',
+    ru: 'Предложите свою цену — она уйдёт продавцу вместе с заказом.',
+    en: 'Offer your price — it goes to the seller with the order.',
+  },
+  howto_2: {
+    hy: 'Վաճառողը պատասխանում է {h} ժամվա ընթացքում՝ ընդունում է, մերժում կամ առաջարկում իր գինը։',
+    ru: 'Продавец отвечает в течение {h} ч: принимает, отклоняет или называет свою цену.',
+    en: 'The seller answers within {h} h: accepts, declines or names their price.',
+  },
+  howto_3: {
+    hy: 'Յուրաքանչյուր կողմին՝ մինչև {n} քայլ։ Գները մոտենում են՝ ձերը բարձրանում է, նրանը՝ իջնում։',
+    ru: 'У каждой стороны до {n} ходов. Цены сходятся: ваша растёт, его снижается.',
+    en: 'Each side has up to {n} moves. Prices converge: yours goes up, theirs comes down.',
+  },
+  howto_4: {
+    hy: 'Եթե վաճառողը ժամանակին չպատասխանի, պատվերը կչեղարկվի. կարող եք կրկնել սովորական գնով։',
+    ru: 'Если продавец не ответит вовремя, заказ отменится — его можно повторить по обычной цене.',
+    en: 'If the seller does not answer in time, the order is cancelled — repeat it at the usual price.',
+  },
+  howto_got: { hy: 'Պարզ է', ru: 'Понятно', en: 'Got it' },
+  hint_seller_agrees: {
+    hy: 'Վաճառողն անմիջապես համաձայնում է մինչև {p}% զեղչին',
+    ru: 'Продавец сразу соглашается на скидку до {p}%',
+    en: 'The seller agrees at once to up to {p}% off',
+  },
+  hint_generic: {
+    hy: 'Խելամիտ առաջարկ՝ 3–7% զեղչ։ Չափազանց ցածրը հավանաբար կմերժեն։',
+    ru: 'Разумное предложение — скидка 3–7%. Слишком низкое скорее отклонят.',
+    en: 'A sensible offer is 3–7% off. A lowball is likely to be declined.',
+  },
+  zone_likely: { hy: 'հավանաբար կընդունեն անմիջապես', ru: 'скорее примут сразу', en: 'likely accepted at once' },
+  zone_maybe: { hy: 'հավանաբար կլինի հակաառաջարկ', ru: 'вероятно, будет встречная', en: 'likely a counter-offer' },
   cancel_edit: { hy: 'Չեղարկել', ru: 'Отмена', en: 'Cancel' },
   no_products: { hy: 'Ապրանքներ դեռ չկան', ru: 'Товаров пока нет', en: 'No products yet' },
   products_hidden_until_verified: {
@@ -521,8 +608,8 @@ export const PROBLEMS: Record<string, T3> = {
   bad_email: { hy: 'Սխալ էլ. հասցե', ru: 'Неверная почта', en: 'Invalid e-mail' },
   too_many_codes: { hy: 'Շատ փորձեր, փորձեք մեկ ժամից', ru: 'Слишком много кодов, попробуйте через час', en: 'Too many codes, try in an hour' },
   bad_tier: { hy: 'Շեմը պետք է մեծ քանակ և ցածր գին ունենա', ru: 'Порог: количество больше минимума, цена ниже основной', en: 'Tier: more than min qty, lower price' },
-  accept_below_price: { hy: 'Ընդունման գինը պետք է ցածր լինի', ru: 'Цена принятия должна быть ниже цены', en: 'Accept price must be below the price' },
-  floor_above_accept: { hy: 'Մերժման շեմը բարձր է', ru: 'Порог отказа выше цены принятия', en: 'Floor above accept price' },
+  floor_above_accept: { hy: 'Մերժման շեմը պետք է մեծ լինի ընդունման զեղչից', ru: 'Порог отказа должен быть больше скидки, на которую вы соглашаетесь сразу', en: 'The decline threshold must be above the auto-accept discount' },
+  bad_accept_discount: { hy: 'Նշեք զեղչը 0,5%-ից մինչև 50%', ru: 'Укажите скидку от 0,5% до 50%', en: 'Set a discount from 0.5% to 50%' },
   bad_zone: { hy: 'Նշեք թաղամասն ու օրերը', ru: 'Укажите район и дни', en: 'Set a district and days' },
   too_long: { hy: 'Շատ երկար է', ru: 'Слишком длинно', en: 'Too long' },
   invalid_transition: { hy: 'Պատվերն արդեն փոխվել է', ru: 'Заказ уже изменился — обновите', en: 'The order changed, refresh' },
@@ -545,6 +632,11 @@ export function useT() {
 }
 
 /** Human text for an API problem code, falling back to the code itself. */
+/** Fills {name} placeholders: fill('up to {p}%', { p: 3 }) */
+export function fill(text: string, vars: Record<string, string | number>): string {
+  return text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m))
+}
+
 export function problemText(code: string, lang: Lang): string {
   return PROBLEMS[code]?.[lang] ?? code
 }

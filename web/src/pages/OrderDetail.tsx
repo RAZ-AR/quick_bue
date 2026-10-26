@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { OrderConvergence } from '../components/Negotiation'
 import { OrderChat } from '../components/Chat'
+import { ClientCard } from '../components/ClientCard'
 import { OrderDocuments } from '../components/OrderDocuments'
 import { PriceDial } from '../components/PriceDial'
 import { StageRail } from '../components/StageRail'
@@ -10,6 +11,7 @@ import { ACTIONS, problemText, SOURCES, STATUSES, STEPS, TEXTS, useLang, useT } 
 import { api, ApiError, type Decision, type LineAnswer, type Offer, type Order, type OrderLine } from '../lib/api'
 import { useCartMaybe } from '../lib/cart'
 import { amd, date, dateTime, qty, tr, unit } from '../lib/format'
+import { midpoint, pct } from '../lib/haggle'
 
 const POLL_MS = 10_000
 // Which button carries the next step (drawn as the primary one)
@@ -141,11 +143,18 @@ export function OrderDetail() {
               </span>
             )}
           </header>
+          {isSeller && order.client && <ClientCard name={order.buyer.display_name} c={order.client} />}
           <OrderConvergence order={order} lineName={(l) => tr(l.name_snapshot, lang)} />
           <OfferLog offers={nego.offers} order={order} />
           {nego.my_turn && order.status === 'negotiating' && (
             <AnswerBox order={order} busy={busy} onAnswer={(body) => run(api.respond(order.id, body), setOrder)} />
           )}
+        </section>
+      )}
+
+      {!nego && isSeller && order.client && order.status === 'placed' && (
+        <section className="ticket">
+          <ClientCard name={order.buyer.display_name} c={order.client} />
         </section>
       )}
 
@@ -328,6 +337,8 @@ function AnswerBox({
     // seller counters with a smaller discount, buyer with a bigger one (but below their previous ask)
     const lo = order.my_side === 'seller' ? 50 : theirs + 50
     const hi = order.my_side === 'seller' ? theirs - 50 : (own ?? 5000) - 50
+    // Halfway between the two latest asks, in half-percent steps
+    const half = Math.round(((theirs + (own ?? 0)) / 2) / 50) * 50
     return (
       <div className="answer">
         <div className="seg">
@@ -339,18 +350,35 @@ function AnswerBox({
               </button>
             ))}
         </div>
-        {mode === 'countered' && (
-          <div className="dial-presets">
-            {[2, 3, 4, 5, 6, 7, 8, 10]
-              .map((p) => p * 100)
-              .filter((bp) => bp >= lo && bp <= hi)
-              .map((bp) => (
-                <button key={bp} className={percent === bp ? 'on' : ''} onClick={() => setPercent(bp)}>
-                  −{bp / 100}%
-                </button>
-              ))}
-          </div>
+        {mode === 'accepted' && (
+          <p className="hint">
+            {order.my_side === 'seller' ? t('you_give') : t('you_save')}{' '}
+            <b className="num">
+              −{pct(theirs)}% ≈ {amd(Math.round((order.subtotal_amd * theirs) / 10_000))}
+            </b>
+          </p>
         )}
+        {mode === 'declined' && (
+          <p className="hint">
+            {t('price_stays')} <b className="num">{amd(order.subtotal_amd)}</b>
+          </p>
+        )}
+        {mode === 'countered' && (
+          <>
+            <div className="dial-presets">
+              {[...new Set([half, 200, 300, 400, 500, 600, 700, 800, 1000])]
+                .filter((bp) => bp >= lo && bp <= hi)
+                .sort((a, b) => a - b)
+                .map((bp) => (
+                  <button key={bp} className={percent === bp ? 'on' : ''} onClick={() => setPercent(bp)}>
+                    −{pct(bp)}%{bp === half ? ` · ${t('halfway').toLowerCase()}` : ''}
+                  </button>
+                ))}
+            </div>
+            {nego.rounds_left === 1 && <p className="hint">{t('last_move')}</p>}
+          </>
+        )}
+        <p className="hint muted">{t('no_answer_cancels')}</p>
         <button
           className="btn primary block"
           disabled={busy || (mode === 'countered' && percent === null)}
@@ -374,6 +402,10 @@ function AnswerBox({
           order.my_side === 'seller'
             ? [ol.proposed_price_amd + 10, Math.min(own ?? line.list_price_amd, line.list_price_amd) - 10]
             : [(own ?? Math.ceil(line.list_price_amd * 0.5)) + 10, ol.proposed_price_amd - 10]
+        const half =
+          order.my_side === 'seller'
+            ? midpoint(ol.proposed_price_amd, Math.min(own ?? line.list_price_amd, line.list_price_amd))
+            : midpoint(own ?? ol.proposed_price_amd, ol.proposed_price_amd)
         return (
           <div key={ol.order_line_id} className="answer-line">
             <div className="line-name">
@@ -389,6 +421,25 @@ function AnswerBox({
                   </button>
                 ))}
             </div>
+            <LineHint
+              side={order.my_side}
+              decision={a.decision}
+              list={line.list_price_amd}
+              theirs={ol.proposed_price_amd}
+              qty={Number(line.qty_ordered)}
+            />
+            {a.decision === 'countered' && (
+              <div className="hint-row">
+                <span className="muted small num">
+                  {t('counter_range')} {amd(lo)} – {amd(hi)}
+                </span>
+                {half >= lo && half <= hi && (
+                  <button type="button" className="pill haggle" onClick={() => set({ price: half })}>
+                    {t('halfway')}: {amd(half)}
+                  </button>
+                )}
+              </div>
+            )}
             {a.decision === 'countered' && (
               <PriceDial
                 reference={line.list_price_amd}
@@ -406,6 +457,8 @@ function AnswerBox({
           </div>
         )
       })}
+      {nego.rounds_left === 1 && <p className="hint">{t('last_move')}</p>}
+      <p className="hint muted">{t('no_answer_cancels')}</p>
       <button
         className="btn primary block"
         disabled={busy || openLines.some((ol) => answers[ol.order_line_id]?.decision === 'countered' && answers[ol.order_line_id]?.price === null)}
@@ -422,6 +475,39 @@ function AnswerBox({
       </button>
     </div>
   )
+}
+
+/** What the chosen answer means in money for this line. */
+function LineHint({
+  side,
+  decision,
+  list,
+  theirs,
+  qty: q,
+}: {
+  side: 'buyer' | 'seller'
+  decision: Decision
+  list: number
+  theirs: number
+  qty: number
+}) {
+  const t = useT()
+  if (decision === 'accepted')
+    return (
+      <p className="hint">
+        {side === 'seller' ? t('you_give') : t('you_save')}{' '}
+        <b className="num">
+          {amd(Math.round((list - theirs) * q))} · −{pct(Math.floor(((list - theirs) * 10_000) / list))}%
+        </b>
+      </p>
+    )
+  if (decision === 'declined')
+    return (
+      <p className="hint">
+        {t('price_stays')} <b className="num">{amd(list)}</b>
+      </p>
+    )
+  return null
 }
 
 function segClass(d: Decision) {

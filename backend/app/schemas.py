@@ -5,6 +5,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 
 from app.models import (
+    ClientSource,
     DocumentKind,
     DocumentStatus,
     FileKind,
@@ -136,6 +137,7 @@ class CartLineOut(BaseModel):
     offer_price_amd: int | None
     offers_allowed: bool
     offer_min_line_amd: int
+    offer_hint_bp: int | None = None  # "the seller agrees to up to N% at once", if they share it
     problems: list[str]
 
 
@@ -149,6 +151,7 @@ class CartGroupOut(BaseModel):
     missing_amd: int
     free_delivery_from_amd: int | None
     delivery_date: date | None
+    offer_response_hours: int  # how long the seller has to answer an offer
     problems: list[str]
 
 
@@ -158,6 +161,7 @@ class CartOut(BaseModel):
     address: AddressOut | None
     problems: list[dict]
     can_negotiate: bool
+    offer_max_rounds: int  # moves per side in one negotiation
 
 
 class OrderOfferIn(BaseModel):
@@ -222,6 +226,20 @@ class EventOut(BaseModel):
     auto: bool = False
 
 
+class ClientOut(BaseModel):
+    """The buyer's history with this seller; only the seller sees it."""
+
+    source: ClientSource | None
+    orders: int
+    accepted_orders: int
+    avg_order_amd: int
+    first_order_at: datetime | None
+    last_order_at: datetime | None
+    negotiated_orders: int
+    agreed_orders: int
+    avg_discount_bp: int
+
+
 class OrderOut(BaseModel):
     id: uuid.UUID
     number: str
@@ -249,6 +267,7 @@ class OrderOut(BaseModel):
     saving_amd: int  # won in negotiation: lower line prices + order discount
     events: list[EventOut]
     unread_messages: int = 0
+    client: ClientOut | None = None  # seller side only
 
 
 class OrderListItem(BaseModel):

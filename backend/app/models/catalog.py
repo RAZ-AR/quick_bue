@@ -142,6 +142,8 @@ class OfferRule(UUIDPk, Timestamped, Base):
     auto_counter: Mapped[bool] = mapped_column(Boolean, default=True)
     only_regulars: Mapped[bool] = mapped_column(Boolean, default=False)
     min_qty: Mapped[Decimal | None] = mapped_column(Qty)
+    # The seller lets buyers see the auto-accept discount as a hint ("agrees to up to 3% at once")
+    share_hint: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class ClientLink(UUIDPk, Timestamped, Base):

@@ -211,7 +211,7 @@ PRODUCT = {
     "qty_step": "1",
     "allow_offers": True,
     "tiers": [{"min_qty": "10", "price_amd": 4000}],
-    "autopilot": {"floor_price_amd": 3700, "accept_price_amd": 3950},
+    "autopilot": {"accept_discount_bp": 600, "max_discount_bp": 1200, "share_hint": True},
 }
 
 
@@ -220,11 +220,9 @@ async def test_seller_manages_products_and_terms(client):
     r = await client.post("/seller/products", headers=lori, json=PRODUCT)
     assert r.status_code == 201, r.text
     p = r.json()
-    assert (p["vat_rate_bp"], p["tiers"][0]["price_amd"], p["autopilot"]["accept_price_amd"]) == (
-        0,
-        4000,
-        3950,
-    )
+    ap = p["autopilot"]
+    assert (p["vat_rate_bp"], p["tiers"][0]["price_amd"]) == (0, 4000)
+    assert (ap["accept_discount_bp"], ap["max_discount_bp"], ap["share_hint"]) == (600, 1200, True)
     # Visible in the catalog and found by its Russian name in Latin letters
     found = (await client.get("/products", params={"q": "motsarella"})).json()["items"]
     assert [x["id"] for x in found] == [p["id"]]
@@ -239,9 +237,12 @@ async def test_seller_manages_products_and_terms(client):
     }
     assert len((await client.get("/seller/products", headers=lori, params={"archived": True})).json()) == 1
 
-    bad = {**PRODUCT, "autopilot": {"floor_price_amd": 4000, "accept_price_amd": 3900}}
+    bad = {**PRODUCT, "autopilot": {"accept_discount_bp": 900, "max_discount_bp": 500}}
     r = await client.post("/seller/products", headers=lori, json=bad)
     assert r.json()["details"]["problems"][0]["code"] == "floor_above_accept"
+    no_accept = {**PRODUCT, "autopilot": {"accept_discount_bp": None}}
+    r = await client.post("/seller/products", headers=lori, json=no_accept)
+    assert r.json()["details"]["problems"][0]["code"] == "bad_accept_discount"
 
     s = (await client.get("/seller/settings", headers=lori)).json()
     s.update(min_order_amd=25_000, zones=[{"district": "Kentron", "weekdays": [1, 3, 5]}])

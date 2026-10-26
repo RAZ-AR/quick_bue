@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+import { AutopilotEditor, DEFAULT_AUTOPILOT } from '../components/AutopilotEditor'
 import { Field, SelectField } from '../components/Field'
 import { Sheet } from '../components/Sheet'
 import { Tile } from '../components/ui'
@@ -156,7 +157,6 @@ function ProductEditor({
     }
   }
 
-  const ap = f.autopilot ?? { enabled: true, floor_price_amd: null, accept_price_amd: null, auto_counter: true, min_line_amd: null }
   return (
     <Sheet onClose={onClose}>
       <form className="sheet-form" onSubmit={save}>
@@ -209,23 +209,21 @@ function ProductEditor({
         </fieldset>
 
         <label className="check">
-          <input type="checkbox" checked={f.allow_offers} onChange={(e) => set({ allow_offers: e.target.checked, autopilot: e.target.checked ? ap : null })} />{' '}
+          <input type="checkbox" checked={f.allow_offers} onChange={(e) => set({ allow_offers: e.target.checked, autopilot: e.target.checked ? (f.autopilot ?? DEFAULT_AUTOPILOT) : null })} />{' '}
           ⇄ {t('allow_offers_label')}
         </label>
         {f.allow_offers && (
-          <fieldset className="box">
-            <legend>⚡ {t('autopilot_title')}</legend>
-            <p className="muted small" style={{ margin: 0 }}>
-              {t('autopilot_hint')}
-            </p>
-            <div className="form-grid tight">
-              <Field label={t('floor_price')} inputMode="numeric" value={ap.floor_price_amd ?? ''} onChange={(e) => set({ autopilot: { ...ap, floor_price_amd: e.target.value ? num(e.target.value) : null } })} />
-              <Field label={t('accept_price')} inputMode="numeric" value={ap.accept_price_amd ?? ''} onChange={(e) => set({ autopilot: { ...ap, accept_price_amd: e.target.value ? num(e.target.value) : null } })} />
-            </div>
+          <>
             <label className="check">
-              <input type="checkbox" checked={ap.auto_counter} onChange={(e) => set({ autopilot: { ...ap, auto_counter: e.target.checked } })} /> {t('auto_counter')}
+              <input type="checkbox" checked={!!f.autopilot} onChange={(e) => set({ autopilot: e.target.checked ? DEFAULT_AUTOPILOT : null })} /> ⚡{' '}
+              {t('autopilot_title')}
             </label>
-          </fieldset>
+            {f.autopilot ? (
+              <AutopilotEditor value={f.autopilot} basePrice={f.base_price_amd} unitLabel={unit(f.unit, lang)} onChange={(next) => set({ autopilot: next })} />
+            ) : (
+              <p className="muted small">{t('ap_off')}</p>
+            )}
+          </>
         )}
         {errors.map((e) => (
           <p key={e} className="error small">

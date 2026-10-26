@@ -344,3 +344,65 @@ async def test_next_step_saving_and_timeline(client, as_user):
     [item] = (await client.get("/orders", headers=lori)).json()["items"]
     assert (item["my_side"], item["next_step"], item["saving_amd"]) == ("seller", "confirm", 2400)
     assert item["preview"][0]["en"] == "Lori cheese"
+
+
+# --- hints for both sides ---------------------------------------------------------------------------------
+
+
+async def test_legacy_absolute_autopilot_reads_as_discounts(client, as_user):
+    lori = await as_user("lori")
+    cheese = next(
+        p
+        for p in (await client.get("/seller/products", headers=lori)).json()
+        if p["name"]["en"] == "Lori cheese"
+    )
+    ap = cheese["autopilot"]
+    # list 3 500: accept from 3 300 = -5.71%, floor 3 000 = -14.28% (rounded down)
+    assert (ap["accept_discount_bp"], ap["max_discount_bp"], ap["share_hint"]) == (571, 1428, False)
+
+
+async def test_cart_shows_rules_and_shared_hint(client, as_user):
+    arax, lori = await as_user("arax"), await as_user("lori")
+    cheese = await product_id(client, arax, "Lori cheese")
+    cart = await put(client, arax, cheese, 12)
+    [group] = cart["groups"]
+    assert (cart["offer_max_rounds"], group["offer_response_hours"]) == (3, 24)
+    assert group["lines"][0]["offer_hint_bp"] is None  # the seller did not share it
+
+    product = next(
+        p
+        for p in (await client.get("/seller/products", headers=lori)).json()
+        if p["name"]["en"] == "Lori cheese"
+    )
+    body = {k: v for k, v in product.items() if k not in ("id", "archived", "vat_rate_bp")}
+    body["autopilot"] = {**product["autopilot"], "share_hint": True}
+    r = await client.put(f"/seller/products/{product['id']}", headers=lori, json=body)
+    assert r.status_code == 200, r.text
+    line = (await client.get("/cart", headers=arax)).json()["groups"][0]["lines"][0]
+    assert line["offer_hint_bp"] == 571
+
+    # Saved as a percentage now: the autopilot still accepts 3 300 on a 3 500 list price
+    await put(client, arax, cheese, 12, offer=3300)
+    [order] = (await checkout(client, arax)).json()["orders"]
+    assert order["negotiation"]["status"] == "agreed"
+
+
+async def test_seller_sees_client_history_buyer_does_not(client, as_user):
+    arax, lori = await as_user("arax"), await as_user("lori")
+    cheese = await product_id(client, arax, "Lori cheese")
+    await put(client, arax, cheese, 12, offer=3300)
+    [first] = (await checkout(client, arax)).json()["orders"]
+    assert first["client"] is None
+
+    await put(client, arax, cheese, 12, offer=3100)
+    [second] = (await checkout(client, arax)).json()["orders"]
+    seen = (await client.get(f"/orders/{second['id']}", headers=lori)).json()
+    c = seen["client"]
+    assert (c["source"], c["orders"], c["negotiated_orders"], c["agreed_orders"]) == (
+        "seller_invited",
+        1,
+        1,
+        1,
+    )
+    assert c["avg_order_amd"] == first["total_amd"]
+    assert c["avg_discount_bp"] == (3500 - 3300) * 10_000 // 3500

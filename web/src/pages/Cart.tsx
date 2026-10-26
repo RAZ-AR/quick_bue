@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { HaggleHowTo, howToSeen } from '../components/HaggleHowTo'
 import { PriceDial } from '../components/PriceDial'
 import { QtyStepper } from '../components/QtyStepper'
 import { OrderMeter } from '../components/ui'
-import { problemText, SOURCES, useLang, useT } from '../i18n'
+import { fill, problemText, SOURCES, useLang, useT } from '../i18n'
 import { api, ApiError, type Address, type CartGroup, type CartLine, type Product } from '../lib/api'
 import { useCart } from '../lib/cart'
 import { amd, date, tr, unit } from '../lib/format'
+import { pct, priceForDiscount } from '../lib/haggle'
 import { useSession } from '../lib/session'
 
 const DISCOUNTS = [3, 5, 7, 10]
@@ -190,6 +192,7 @@ function ServerCart() {
           key={g.seller.id}
           g={g}
           canNegotiate={cart.can_negotiate}
+          rounds={cart.offer_max_rounds}
           discount={discounts[g.seller.id] ?? 0}
           onDiscount={(v) => setDiscounts((d) => ({ ...d, [g.seller.id]: v }))}
         />
@@ -240,11 +243,13 @@ function ServerCart() {
 function SellerTicket({
   g,
   canNegotiate,
+  rounds,
   discount,
   onDiscount,
 }: {
   g: CartGroup
   canNegotiate: boolean
+  rounds: number
   discount: number
   onDiscount: (v: number) => void
 }) {
@@ -260,7 +265,7 @@ function SellerTicket({
       <OrderMeter subtotal={g.subtotal_amd} min={g.min_order_amd} freeFrom={g.free_delivery_from_amd} />
       <ul className="lines">
         {g.lines.map((l) => (
-          <Line key={l.product_id} l={l} canNegotiate={canNegotiate} />
+          <Line key={l.product_id} l={l} canNegotiate={canNegotiate} hours={g.offer_response_hours} rounds={rounds} />
         ))}
       </ul>
       <hr className="rule" />
@@ -293,12 +298,13 @@ function SellerTicket({
   )
 }
 
-function Line({ l, canNegotiate }: { l: CartLine; canNegotiate: boolean }) {
+function Line({ l, canNegotiate, hours, rounds }: { l: CartLine; canNegotiate: boolean; hours: number; rounds: number }) {
   const t = useT()
   const lang = useLang()
   const { setItem, remove } = useCart()
   const [busy, setBusy] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
+  const [howTo, setHowTo] = useState(false)
 
   async function run(p: Promise<void>) {
     setBusy(true)
@@ -347,7 +353,14 @@ function Line({ l, canNegotiate }: { l: CartLine; canNegotiate: boolean }) {
               ⇄ {amd(offered)} · −{Math.round((1 - offered / l.unit_price_amd) * 100)}%
             </button>
           ) : (
-            <button className="link small" disabled={tooSmall} onClick={() => setOfferOpen((o) => !o)}>
+            <button
+              className="link small"
+              disabled={tooSmall}
+              onClick={() => {
+                setOfferOpen((o) => !o)
+                if (!howToSeen()) setHowTo(true)
+              }}
+            >
               ⇄ {t('offer_price')}
             </button>
           ))}
@@ -359,7 +372,19 @@ function Line({ l, canNegotiate }: { l: CartLine; canNegotiate: boolean }) {
       )}
       {canOffer && offerOpen && !tooSmall && (
         <>
+          {howTo && <HaggleHowTo hours={hours} rounds={rounds} onClose={() => setHowTo(false)} />}
+          <div className="hint-row">
+            <span className={l.offer_hint_bp ? 'hint strong' : 'hint muted'}>
+              {l.offer_hint_bp ? fill(t('hint_seller_agrees'), { p: pct(l.offer_hint_bp) }) : t('hint_generic')}
+            </span>
+            {!howTo && (
+              <button type="button" className="link small" onClick={() => setHowTo(true)}>
+                {t('howto_link')}
+              </button>
+            )}
+          </div>
           <PriceDial
+            likelyFrom={l.offer_hint_bp ? priceForDiscount(l.unit_price_amd, l.offer_hint_bp) : null}
             reference={l.unit_price_amd}
             qty={Number(l.qty)}
             value={offered}

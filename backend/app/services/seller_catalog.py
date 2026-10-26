@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.search import build_search_text
+from app.domain.negotiation import MAX_DISCOUNT_BP, discount_bp
 from app.models import (
     Category,
     DeliveryZone,
@@ -38,11 +39,14 @@ class TierIn:
 
 @dataclass
 class AutopilotIn:
+    """Discounts in basis points from the line price: 300 = "agree to up to 3% at once"."""
+
     enabled: bool = True
-    floor_price_amd: int | None = None
-    accept_price_amd: int | None = None
-    auto_counter: bool = True
+    accept_discount_bp: int | None = None  # agree at once to a discount up to this
+    max_discount_bp: int | None = None  # decline anything deeper; None = no floor
+    auto_counter: bool = True  # in between: counter halfway
     min_line_amd: int | None = None
+    share_hint: bool = False  # show buyers the auto-accept discount
 
 
 @dataclass
@@ -86,12 +90,10 @@ def _validate(data: ProductIn) -> list[dict]:
             break
     a = data.autopilot
     if a and a.enabled:
-        if a.accept_price_amd is None or a.accept_price_amd >= data.base_price_amd:
-            p.append({"field": "autopilot", "code": "accept_below_price"})
-        if (
-            a.floor_price_amd is not None
-            and a.accept_price_amd is not None
-            and a.floor_price_amd > a.accept_price_amd
+        if a.accept_discount_bp is None or not 0 < a.accept_discount_bp <= MAX_DISCOUNT_BP:
+            p.append({"field": "autopilot", "code": "bad_accept_discount"})
+        elif (
+            a.max_discount_bp is not None and not a.accept_discount_bp <= a.max_discount_bp <= MAX_DISCOUNT_BP
         ):
             p.append({"field": "autopilot", "code": "floor_above_accept"})
     return p
@@ -128,10 +130,32 @@ async def _apply(session: AsyncSession, actor: Actor, product: Product, data: Pr
         rule = OfferRule(seller_id=actor.org.id, scope=RuleScope.product, scope_id=product.id)
         session.add(rule)
     rule.enabled = a.enabled
-    rule.floor_price_amd = a.floor_price_amd
-    rule.auto_accept_price_amd = a.accept_price_amd
+    # Percentages follow the line price (volume and contract prices too); absolute prices are legacy
+    rule.floor_price_amd = None
+    rule.auto_accept_price_amd = None
+    rule.auto_accept_pct_bp = 10_000 - a.accept_discount_bp if a.accept_discount_bp is not None else None
+    rule.floor_pct_bp = 10_000 - a.max_discount_bp if a.max_discount_bp is not None else None
     rule.auto_counter = a.auto_counter
     rule.min_line_amd = a.min_line_amd
+    rule.share_hint = a.share_hint
+
+
+def autopilot_out(rule: OfferRule, base_price_amd: int) -> AutopilotIn:
+    """A stored rule as discounts; legacy absolute prices are turned into discounts from the list price."""
+
+    def discount(price: int | None, pct_bp: int | None) -> int | None:
+        if price is not None:
+            return discount_bp(price, base_price_amd)
+        return 10_000 - pct_bp if pct_bp is not None else None
+
+    return AutopilotIn(
+        enabled=rule.enabled,
+        accept_discount_bp=discount(rule.auto_accept_price_amd, rule.auto_accept_pct_bp),
+        max_discount_bp=discount(rule.floor_price_amd, rule.floor_pct_bp),
+        auto_counter=rule.auto_counter,
+        min_line_amd=rule.min_line_amd,
+        share_hint=rule.share_hint,
+    )
 
 
 async def _category_exists(session: AsyncSession, category_id: uuid.UUID | None) -> bool:

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
 from app.auth.deps import CurrentActor, Session
+from app.config import get_settings
 from app.models import Address
 from app.platform import idempotency
 from app.platform.authz import Action
@@ -49,6 +50,7 @@ async def _cart_out(session: Session, actor: CurrentActor, address_id: uuid.UUID
                         offer_price_amd=li.item.offer_price_amd,
                         offers_allowed=li.product.allow_offers,
                         offer_min_line_amd=li.offer_min_line_amd,
+                        offer_hint_bp=li.offer_hint_bp,
                         problems=li.problems,
                     )
                     for li in g.lines
@@ -60,6 +62,9 @@ async def _cart_out(session: Session, actor: CurrentActor, address_id: uuid.UUID
                 missing_amd=g.missing_amd,
                 free_delivery_from_amd=g.profile.free_delivery_from_amd if g.profile else None,
                 delivery_date=g.delivery_date,
+                offer_response_hours=(
+                    g.profile.offer_response_hours if g.profile else get_settings().offer_response_hours
+                ),
                 problems=g.problems,
             )
         )
@@ -69,6 +74,7 @@ async def _cart_out(session: Session, actor: CurrentActor, address_id: uuid.UUID
         address=AddressOut.model_validate(view.address) if view.address else None,
         problems=view.problems,
         can_negotiate=actor.can(Action.offer_make),
+        offer_max_rounds=get_settings().offer_max_rounds,
     )
 
 

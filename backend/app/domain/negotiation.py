@@ -5,7 +5,7 @@ each seller counter is lower than the previous one, and they never cross.
 """
 
 from dataclasses import dataclass
-from decimal import ROUND_CEILING, Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 
 from app.domain.pricing import line_total_amd
@@ -111,8 +111,25 @@ class Decision:
     reason: str | None = None
 
 
+def discount_bp(price: int, reference: int) -> int:
+    """How far below the reference a price is, in basis points (rounded down: never promise more)."""
+    if reference <= 0 or price >= reference:
+        return 0
+    return (reference - price) * 10_000 // reference
+
+
+def accept_discount_bp(rule: AutoRule, reference: int) -> int | None:
+    """The discount the autopilot accepts at once for this reference price."""
+    if rule.accept_price_amd is not None:
+        return discount_bp(rule.accept_price_amd, reference)
+    if rule.accept_pct_bp is not None:
+        return 10_000 - rule.accept_pct_bp
+    return None
+
+
 def _pct(reference: int, bp: int) -> int:
-    return int((Decimal(reference) * bp / 10_000).to_integral_value(rounding=ROUND_CEILING))
+    # Nearest dram: a rule saved as "-5.71%" keeps the 3 300 it was set from on a 3 500 price
+    return int((Decimal(reference) * bp / 10_000).to_integral_value(rounding=ROUND_HALF_UP))
 
 
 def _round10(value: Decimal) -> int:

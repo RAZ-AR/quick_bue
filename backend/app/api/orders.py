@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import asdict
 from datetime import date, datetime, time, timedelta
 from typing import Annotated
 
@@ -31,6 +32,7 @@ from app.schemas import (
     AddressOut,
     AgreementIn,
     AgreementOut,
+    ClientOut,
     ConfirmIn,
     DocumentOut,
     DocumentPage,
@@ -51,6 +53,7 @@ from app.schemas import (
 )
 from app.services import agreements as agreement_svc
 from app.services import chat as chat_svc
+from app.services import clients as client_svc
 from app.services import documents as doc_svc
 from app.services import negotiation as nego_svc
 from app.services import notifications as notification_svc
@@ -155,6 +158,11 @@ async def order_out(session: Session, actor: Actor, order: Order) -> OrderOut:
         select(OrderEvent).where(OrderEvent.order_id == order.id).order_by(OrderEvent.at, OrderEvent.id)
     )
     step, deadline = _next_step(order, side, nego)
+    client = (
+        ClientOut(**asdict(await client_svc.profile(session, order.seller_id, order.buyer_id, order.id)))
+        if side == By.seller
+        else None
+    )
     return OrderOut(
         id=order.id,
         number=order.number,
@@ -181,6 +189,7 @@ async def order_out(session: Session, actor: Actor, order: Order) -> OrderOut:
         unread_messages=await notification_svc.unread_messages(session, actor.user, order),
         saving_amd=_saving(order),
         events=[EventOut(type=e.type, at=e.at, auto=bool((e.payload or {}).get("auto"))) for e in events],
+        client=client,
     )
 
 
