@@ -7,7 +7,7 @@ import { DocManager, PhotoManager, SpecFields } from '../components/ProductParts
 import { Sheet } from '../components/Sheet'
 import { Tile } from '../components/ui'
 import { problemText, useLang, useT } from '../i18n'
-import { api, ApiError, type Category, type ProductInput, type SellerProduct, type Unit } from '../lib/api'
+import { api, ApiError, mediaUrl, type Category, type ProductInput, type SellerProduct, type Unit } from '../lib/api'
 import { amd, qty, tr, unit } from '../lib/format'
 import { useSession } from '../lib/session'
 import { useSpecDefs } from '../lib/specs'
@@ -81,7 +81,13 @@ export function SellerProducts() {
           const name = tr(p.name, lang)
           return (
             <li key={p.id} className={p.in_stock ? 'product' : 'product out'}>
-              <Tile slug={p.category_id ? slugOf[p.category_id] : undefined} name={name} />
+              <span className="product-thumb">
+                {p.images[0] ? (
+                  <img src={mediaUrl(p.images[0].thumb)} alt="" loading="lazy" />
+                ) : (
+                  <Tile slug={p.category_id ? slugOf[p.category_id] : undefined} name={name} />
+                )}
+              </span>
               <div>
                 <h3>{name}</h3>
                 <p className="seller">{[p.sku, p.pack_size].filter(Boolean).join(' · ') || '\u00a0'}</p>
