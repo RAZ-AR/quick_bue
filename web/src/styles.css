@@ -1,29 +1,48 @@
-/* QB design system — "monochrome + one apricot".
-   Everything is quiet: white cards on a light grey canvas, black for weight and action.
-   One living colour — apricot (ծիրան) — marks what is yours, what is urgent and what you won.
-   Big numbers are light and large; labels are small. Controls are round. Unknown/remaining space is hatched. */
+/* QB design system — "soft glass: grey, yellow, black".
+   A calm sage-grey wallpaper; content sits on milky frosted cards; floating controls (navigation, the cart bar,
+   sheets, suggestions) are real glass over the scrolling content. Black is weight and action, yellow is the one
+   living colour: what is yours, the next step, today, what you won. The signature is a black capsule set into a
+   yellow card (the next step, the cart bar). Everything is round and soft: big radii, soft light, no hard lines.
+   Big numbers are light and large; labels are small and bold. Unknown/remaining space is hatched. */
 
 :root {
-  --canvas: #ececef;
-  --card: #ffffff;
-  --sunken: #f4f4f6;
-  --ink: #0f0f10;
-  --ink-2: #3c3c40;
-  --muted: #8a8a91;
-  --line: #e2e2e6;
-  --accent: #ff9f2e; /* apricot: fills, with black text on top */
-  --accent-ink: #a8520a; /* apricot as text on white */
-  --on-accent: #0f0f10;
-  --danger: #e5402b;
-  /* Legacy names used inline in components, mapped onto the new palette */
-  --brand: var(--accent-ink);
+  /* wallpaper */
+  --canvas: #d3d6cf;
+  --wall-1: #eef0ea; /* soft light, top left */
+  --wall-2: #b7bdb2; /* shade, right */
+  --wall-3: #e2e4dc; /* floor light */
+  /* surfaces */
+  --surface: rgb(255 255 255 / 0.64); /* milky card on the wallpaper */
+  --surface-strong: rgb(255 255 255 / 0.86); /* inputs, popovers */
+  --glass: rgb(250 251 247 / 0.58); /* floating controls, with blur */
+  --glass-blur: blur(22px) saturate(1.5);
+  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.8), inset 0 0 0 1px rgb(255 255 255 / 0.42);
+  --shadow-soft: 0 12px 32px -16px rgb(38 44 34 / 0.32);
+  --shadow-float: 0 18px 40px -16px rgb(28 32 24 / 0.42);
+  --card: #ffffff; /* the colour opposite to ink: text on black, light fills */
+  --sunken: rgb(28 34 24 / 0.055);
+  /* ink */
+  --ink: #141613;
+  --ink-2: #3a3e37;
+  --muted: #6c7268;
+  --line: rgb(28 34 24 / 0.1);
+  /* the one living colour */
+  --accent: #ffe14a; /* yellow: fills, with black text on top */
+  --accent-soft: #fff3b0;
+  --accent-ink: #7a6400; /* yellow as text on light surfaces */
+  --on-accent: #141613;
+  --capsule: #141613; /* the black capsule in a yellow card: black in both themes */
+  --on-capsule: #ffffff;
+  --danger: #dc4a3d;
+  /* Legacy names used inline in components, mapped onto the palette */
+  --brand: var(--ink);
   --herb: var(--accent-ink);
   --lamp: var(--ink);
   --seller: var(--ink);
-  --r: 26px;
-  --r-m: 20px;
-  --r-s: 14px;
-  --hatch: repeating-linear-gradient(-45deg, rgb(0 0 0 / 0.14) 0 2px, transparent 2px 7px);
+  --r: 30px;
+  --r-m: 22px;
+  --r-s: 16px;
+  --hatch: repeating-linear-gradient(-45deg, rgb(20 24 18 / 0.14) 0 2px, transparent 2px 7px);
   --hatch-accent: repeating-linear-gradient(-45deg, var(--accent) 0 2px, transparent 2px 6px);
   /* Motion */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -43,21 +62,51 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --canvas: #0c0c0e;
-    --card: #19191c;
-    --sunken: #222226;
-    --ink: #f3f3f4;
-    --ink-2: #c9c9cd;
-    --muted: #8b8b93;
-    --line: #2c2c31;
-    --accent-ink: #ffb35c;
+    --canvas: #171916;
+    --wall-1: #2b3028;
+    --wall-2: #0f110e;
+    --wall-3: #20241e;
+    --surface: rgb(46 50 43 / 0.62);
+    --surface-strong: rgb(52 56 49 / 0.92);
+    --glass: rgb(40 44 38 / 0.6);
+    --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+    --shadow-soft: 0 12px 32px -16px rgb(0 0 0 / 0.6);
+    --shadow-float: 0 18px 40px -16px rgb(0 0 0 / 0.7);
+    --card: #141613;
+    --sunken: rgb(255 255 255 / 0.06);
+    --ink: #f1f3ee;
+    --ink-2: #c8ccc3;
+    --muted: #949a8f;
+    --line: rgb(255 255 255 / 0.09);
+    --accent-soft: #3d3712;
+    --accent-ink: #ffe14a;
     --hatch: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.16) 0 2px, transparent 2px 7px);
     color-scheme: dark;
   }
 }
 
+/* Reduce Transparency (and browsers without backdrop blur): the same look, solid */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --surface: #f3f4f0; --surface-strong: #ffffff; --glass: #f6f7f3; --glass-blur: none; }
+}
+@media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
+  :root { --surface: #262924; --surface-strong: #2e322c; --glass: #2a2d27; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass: rgb(246 247 243 / 0.97); }
+}
+
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--canvas); }
+/* The wallpaper: soft light from the top left, a shade on the right. Fixed, so cards float over it */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 12% 0%, var(--wall-1) 0%, transparent 70%),
+    radial-gradient(55% 60% at 100% 35%, var(--wall-2) 0%, transparent 70%),
+    radial-gradient(70% 45% at 40% 100%, var(--wall-3) 0%, transparent 75%),
+    var(--canvas);
+}
 button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 input, select { font: inherit; color: inherit; }
 a { color: inherit; }
@@ -81,7 +130,7 @@ h1, h2, h3 { line-height: 1.15; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 52px; padding: 12px 22px; border-radius: 999px;
-  border: 0; background: var(--card); font-weight: 600; text-decoration: none;
+  border: 0; background: var(--surface); font-weight: 600; text-decoration: none;
   transition: transform var(--t-fast) var(--ease-out), background var(--t-fast);
 }
 .btn:active { transform: scale(0.97); }
@@ -94,14 +143,14 @@ h1, h2, h3 { line-height: 1.15; }
 /* round icon button: the ↗ "open" and + "add" of the references */
 .ibtn {
   flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
-  border: 0; background: var(--card); color: var(--ink); font-size: 18px; line-height: 1;
+  border: 0; background: var(--surface); color: var(--ink); font-size: 18px; line-height: 1;
   box-shadow: inset 0 0 0 1px var(--line); transition: transform var(--t-fast) var(--ease-out);
 }
 .ibtn:active { transform: scale(0.92); }
 .ibtn.dark { background: var(--ink); color: var(--card); box-shadow: none; }
 
 /* --- language switch ----------------------------------------------------------------------------------- */
-.lang { display: inline-flex; background: var(--card); border-radius: 999px; padding: 4px; flex: none; }
+.lang { display: inline-flex; background: var(--surface); border-radius: 999px; padding: 4px; flex: none; }
 .lang button { border: 0; background: none; padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .lang button.on { background: var(--ink); color: var(--card); }
 
@@ -134,7 +183,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .tabbar {
   position: fixed; z-index: 6; left: 50%; transform: translateX(-50%);
   bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: 6px; padding: 6px;
-  background: var(--card); border-radius: 999px; box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.25);
+  background: var(--surface); border-radius: 999px; box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.25);
 }
 .tabbar a {
   position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%;
@@ -151,7 +200,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 }
 
 /* --- card: the core surface ---------------------------------------------------------------------------- */
-.ticket { position: relative; background: var(--card); border-radius: var(--r); padding: 20px; }
+.ticket { position: relative; background: var(--surface); border-radius: var(--r); padding: 20px; }
 .ticket.dark { background: var(--ink); color: var(--card); }
 .ticket.accent { background: var(--accent); color: var(--on-accent); }
 .rule { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
@@ -162,7 +211,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 /* --- chips, pills, status ------------------------------------------------------------------------------ */
 .chip {
   flex: none; display: inline-flex; align-items: center; gap: 6px; border: 0;
-  background: var(--card); border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 600; white-space: nowrap;
+  background: var(--surface); border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 600; white-space: nowrap;
   transition: background var(--t-fast), color var(--t-fast);
 }
 .chip.on { background: var(--ink); color: var(--card); }
@@ -184,7 +233,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .search-wrap { position: sticky; top: 66px; z-index: 4; margin: 0 -16px; padding: 4px 16px 0; background: var(--canvas); }
 .search {
   width: 100%; height: 54px; padding: 0 18px 0 48px; border-radius: 999px; border: 0;
-  background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%238a8a91' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='6.5'/%3E%3Cpath d='m14 14 4.5 4.5'/%3E%3C/svg%3E") 18px center no-repeat;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%238a8a91' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='6.5'/%3E%3Cpath d='m14 14 4.5 4.5'/%3E%3C/svg%3E") 18px center no-repeat;
   font-size: 16px; font-weight: 500;
 }
 .search:focus { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -195,7 +244,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .reorder-strip { display: flex; gap: 10px; overflow-x: auto; padding: 0 0 16px; scrollbar-width: none; }
 .reorder-card {
   position: relative; flex: none; width: 230px; display: grid; gap: 6px; padding: 18px 18px 16px; border-radius: var(--r);
-  background: var(--card); text-align: left; border: 0; color: var(--ink);
+  background: var(--surface); text-align: left; border: 0; color: var(--ink);
 }
 .reorder-card:first-child { background: var(--accent); color: var(--on-accent); }
 .reorder-card .ibtn { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; font-size: 15px; }
@@ -209,7 +258,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
 .product {
   display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: start;
-  background: var(--card); border-radius: var(--r); padding: 16px;
+  background: var(--surface); border-radius: var(--r); padding: 16px;
 }
 .product.out { opacity: 0.5; }
 .tile { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 18px; background: var(--sunken) !important; color: var(--ink) !important; }
@@ -304,17 +353,17 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .dial input[type='range'] { width: 100%; accent-color: var(--ink); height: 30px; }
 .dial-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
 .dial-presets { display: flex; gap: 6px; flex-wrap: wrap; }
-.dial-presets button { border: 0; background: var(--card); border-radius: 999px; padding: 8px 13px; font-size: 13px; font-weight: 700; }
+.dial-presets button { border: 0; background: var(--surface); border-radius: 999px; padding: 8px 13px; font-size: 13px; font-weight: 700; }
 .dial-presets button.on { background: var(--ink); color: var(--card); }
 .dial-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.dial-input { max-width: 120px; background: var(--card) !important; }
+.dial-input { max-width: 120px; background: var(--surface) !important; }
 
 /* --- order: stage rail -------------------------------------------------------------------------------- */
 .rail { list-style: none; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 18px 0 4px; }
 .station { position: relative; display: grid; justify-items: center; align-content: start; gap: 5px; text-align: center; font-size: 11px; line-height: 1.2; color: var(--muted); font-weight: 600; overflow-wrap: anywhere; padding: 0 1px; }
 .station::before { content: ''; position: absolute; top: 8px; left: -50%; right: 50%; height: 3px; background: var(--hatch), var(--sunken); }
 .station:first-child::before { display: none; }
-.station .pin { position: relative; z-index: 1; width: 19px; height: 19px; border-radius: 50%; background: var(--card); box-shadow: inset 0 0 0 2px var(--line); }
+.station .pin { position: relative; z-index: 1; width: 19px; height: 19px; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 2px var(--line); }
 .station.done { color: var(--ink-2); }
 .station.done::before, .station.now::before { background: var(--ink); }
 .station.done .pin { background: var(--ink); box-shadow: none; }
@@ -332,7 +381,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .next strong { display: block; font-size: 18px; letter-spacing: -0.01em; }
 .next .muted { color: rgb(0 0 0 / 0.6); }
 .next .clock { flex: none; font-weight: 700; color: #fff; background: #0f0f10; padding: 8px 14px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.next.calm { background: var(--card); color: var(--ink); }
+.next.calm { background: var(--surface); color: var(--ink); }
 .next.calm .clock { background: var(--sunken); color: var(--ink); }
 
 /* --- negotiation: convergence ---------------------------------------------------------------------- */
@@ -372,7 +421,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .seg button { flex: 1; border: 0; background: none; padding: 11px 8px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--muted); }
 .seg button.on { background: var(--ink); color: var(--card); }
 .seg button.on.counter { background: var(--accent); color: var(--on-accent); }
-.seg button.on.decline { background: var(--card); color: var(--danger); box-shadow: inset 0 0 0 1.5px var(--danger); }
+.seg button.on.decline { background: var(--surface); color: var(--danger); box-shadow: inset 0 0 0 1.5px var(--danger); }
 
 /* --- haggling hints: autopilot preview, client card, rules for the buyer ------------------------------------ */
 .hint { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); }
@@ -400,7 +449,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .ap-input .dial-input { width: 76px; text-align: right; }
 .ap-examples { display: grid; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
 .ap-examples ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.ap-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px 12px; border-radius: 14px; background: var(--card); font-size: 13px; }
+.ap-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px 12px; border-radius: 14px; background: var(--surface); font-size: 13px; }
 .ap-row .ap-arrow { color: var(--muted); }
 .ap-row .ap-verdict { font-weight: 700; }
 .ap-row.accept .ap-verdict { color: var(--ink); }
@@ -419,7 +468,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 
 /* --- price list import ----------------------------------------------------------------------------------- */
 .import-steps { list-style: none; display: flex; gap: 8px; margin: 0; padding: 0; }
-.import-steps li { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; background: var(--card); color: var(--muted); }
+.import-steps li { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; background: var(--surface); color: var(--muted); }
 .import-steps li.on { background: var(--ink); color: var(--card); }
 .import-drop { display: grid; gap: 12px; }
 .import-drop p { margin: 0; max-width: 64ch; }
@@ -428,7 +477,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .import-cols li.mapped { box-shadow: inset 3px 0 0 var(--ink); }
 .import-col-head { display: grid; gap: 2px; min-width: 0; }
 .import-col-head .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.import-cols select, .import-options select { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 999px; border: 0; background: var(--card); color: var(--ink); }
+.import-cols select, .import-options select { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 999px; border: 0; background: var(--surface); color: var(--ink); }
 .import-options { display: grid; gap: 12px; margin: 4px 0 14px; }
 .import-counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .import-count { display: grid; gap: 2px; text-align: left; border: 0; border-radius: var(--r-s); padding: 12px 14px; background: var(--sunken); color: var(--ink); font: inherit; cursor: pointer; }
@@ -448,7 +497,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .import-item-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .import-item-head strong { font-weight: 700; }
 .import-line { margin-left: auto; }
-.import-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; background: var(--card); color: var(--ink-2); }
+.import-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--ink-2); }
 .import-item.is-create .import-tag { background: var(--accent); color: var(--on-accent); }
 .import-item.is-update .import-tag { background: var(--ink); color: var(--card); }
 .import-item.is-error .import-tag { color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
@@ -461,7 +510,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 
 /* --- address field: street suggestions and the map check ------------------------------------------------ */
 .address-field { position: relative; display: grid; gap: 4px; }
-.address-options { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 6px; list-style: none; background: var(--card); border-radius: var(--r-m); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); display: grid; gap: 2px; max-height: 280px; overflow: auto; }
+.address-options { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 6px; list-style: none; background: var(--surface); border-radius: var(--r-m); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); display: grid; gap: 2px; max-height: 280px; overflow: auto; }
 .address-options li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 10px 12px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ink); }
 .address-options li.on, .address-options li:hover { background: var(--sunken); }
 .address-check { margin: 0; font-size: 13px; font-weight: 600; color: var(--accent-ink); }
@@ -472,7 +521,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .suggest-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .suggest-title b { color: var(--accent-ink); font-weight: 800; }
 .picks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--card); }
+.pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }
 .suggest-block .pick { background: var(--sunken); }
 .pick-main { display: grid; gap: 2px; min-width: 0; }
 .pick-name { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -495,7 +544,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 
 /* --- order lists & seller board ---------------------------------------------------------------------- */
 .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.kpi { background: var(--card); border-radius: var(--r); padding: 16px 18px; }
+.kpi { background: var(--surface); border-radius: var(--r); padding: 16px 18px; }
 .kpi b { display: block; font-size: 34px; font-weight: 400; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
 .kpi span { font-size: 12px; color: var(--muted); font-weight: 600; }
 .kpi.lamp { background: var(--accent); color: var(--on-accent); }
@@ -511,7 +560,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .order-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .order-card {
   position: relative; display: grid; gap: 8px; padding: 18px; color: var(--ink); text-decoration: none; border-radius: var(--r);
-  background: var(--card); transition: transform var(--t-fast) var(--ease-out);
+  background: var(--surface); transition: transform var(--t-fast) var(--ease-out);
 }
 .order-card:active { transform: scale(0.99); }
 .order-card.urgent { background: var(--accent); color: var(--on-accent); }
@@ -557,7 +606,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .mode-switch { display: flex; background: var(--sunken); border-radius: 999px; padding: 4px; }
 .mode-switch button { flex: 1; border: 0; background: none; padding: 10px 14px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--muted); white-space: nowrap; transition: background var(--t-mid) var(--ease-out), color var(--t-mid); }
 .mode-switch button.on { background: var(--ink); color: var(--card); }
-.mode-switch.compact { background: var(--card); flex: none; }
+.mode-switch.compact { background: var(--surface); flex: none; }
 .mode-switch.compact button { padding: 7px 11px; font-size: 13px; }
 .banner { margin-bottom: 12px; text-decoration: none; }
 .banner strong { font-size: 15px; }
@@ -565,7 +614,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .page-head .page-title { margin-bottom: 6px; }
 .page-head .actions .btn { flex: none; min-width: 0; white-space: nowrap; }
-.role-card { background: var(--card) !important; color: var(--ink) !important; box-shadow: inset 0 0 0 1.5px var(--line); }
+.role-card { background: var(--surface) !important; color: var(--ink) !important; box-shadow: inset 0 0 0 1.5px var(--line); }
 .role-card.on { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: none; }
 .role-card.on .ibtn { background: var(--ink); color: var(--accent); box-shadow: none; }
 
@@ -575,7 +624,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .check input { width: 22px; height: 22px; accent-color: var(--ink); margin: 0; }
 .box { display: grid; gap: 10px; border: 0; margin: 0; padding: 16px; border-radius: var(--r-m); background: var(--sunken); }
 .box legend { float: left; padding: 0; font-weight: 700; font-size: 14px; }
-.box .field input, .box .field select { background: var(--card); }
+.box .field input, .box .field select { background: var(--surface); }
 
 /* Bottom sheet on phones, centred dialog on desktop */
 .sheet-backdrop {
@@ -584,7 +633,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 }
 .sheet {
   width: 100%; max-width: 640px; max-height: 92dvh; overflow-y: auto; display: grid; gap: 12px;
-  padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); background: var(--card); border-radius: var(--r) var(--r) 0 0;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); background: var(--surface); border-radius: var(--r) var(--r) 0 0;
   animation: rise var(--t-slow) var(--spring) both;
 }
 @keyframes fade { from { opacity: 0; } }
@@ -618,7 +667,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
     color: var(--ink-2); text-decoration: none; font-weight: 600; transition: background var(--t-fast), color var(--t-fast);
   }
   .side-nav a svg { width: 20px; height: 20px; flex: none; }
-  .side-nav a:hover { background: var(--card); color: var(--ink); }
+  .side-nav a:hover { background: var(--surface); color: var(--ink); }
   .side-nav a.active { background: var(--ink); color: var(--card); }
   .side-nav .dot {
     margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--accent);
@@ -654,7 +703,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .notices { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .notice-row {
   width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 18px; border: 0; border-radius: var(--r-m);
-  background: var(--card); text-align: left; color: var(--ink);
+  background: var(--surface); text-align: left; color: var(--ink);
 }
 .notice-row .notice-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: transparent; }
 .notice-row.unread .notice-dot { background: var(--accent); }
@@ -681,7 +730,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .chat-form .ibtn:disabled { opacity: 0.35; }
 
 .doc-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.doc-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-m); background: var(--card); }
+.doc-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-m); background: var(--surface); }
 .doc-row input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--ink); flex: none; margin: 0; }
 .doc-kind { flex: none; width: 48px; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; padding: 6px 0; border-radius: 999px; background: var(--sunken); }
 .doc-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
@@ -697,6 +746,89 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 /* The next step is the card's call to action: its own full-width row, never clipped */
 .order-card .bottom > .pill:last-child:not(:first-child) { flex-basis: 100%; justify-content: center; white-space: normal; text-align: center; padding: 8px 12px; }
 .order-card .top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- soft glass layer ----------------------------------------------------------------------------------
+   Content cards: milky fill + a light top edge + a soft shadow (no blur: the wallpaper under them is calm).
+   Floating controls: real glass (blur) over whatever scrolls beneath. */
+.ticket, .product, .reorder-card, .kpi, .order-card, .doc-row, .address-card, .next.calm {
+  box-shadow: var(--glass-edge), var(--shadow-soft);
+}
+.ticket.dark, .kpi.dark, .checkout { box-shadow: var(--shadow-float); }
+.btn:not(.primary):not(.accent):not(.ghost), .ibtn, .chip:not(.on):not(.toggle), .lang, .mode-switch.compact,
+.add-btn, .dial-presets button {
+  box-shadow: var(--glass-edge);
+}
+.tabbar, .sheet, .address-options, .cartbar-glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge), var(--shadow-float);
+}
+.topbar {
+  background: color-mix(in srgb, var(--canvas) 45%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+.search-wrap { background: transparent; }
+.search {
+  background-color: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge), var(--shadow-soft);
+}
+.sheet-backdrop { background: rgb(20 24 18 / 0.3); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+/* Inputs: a lighter well with a hairline, focus in black */
+.field input, .field select, .dial-input, .qty-edit input, .import-cols select, .import-options select {
+  background: var(--surface-strong) !important;
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: box-shadow var(--t-fast);
+}
+.field input:focus, .field select:focus, .dial-input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--ink); }
+.checkout .field select { background: rgb(255 255 255 / 0.12) !important; box-shadow: none; color: var(--card); }
+
+/* Navigation: the active tab is a yellow disc — the "today" circle of the calendar */
+.tabbar a.active { background: var(--accent); color: var(--on-accent); }
+.tabbar .dot { background: var(--capsule); color: var(--accent); box-shadow: 0 0 0 2px var(--canvas); }
+.order-card.urgent .status { background: var(--capsule); color: var(--on-capsule); }
+@media (min-width: 1024px) {
+  .sidebar { background: color-mix(in srgb, var(--canvas) 35%, transparent); border-right: 0;
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-edge); }
+  .side-nav a.active { background: var(--accent); color: var(--on-accent); }
+  .side-nav .dot, .side-nav a.active .dot { background: var(--capsule); color: var(--accent); }
+}
+
+/* The signature: a black capsule set into a yellow card */
+.cartbar { background: var(--accent); color: var(--on-accent); padding: 8px 8px 8px 8px; box-shadow: var(--shadow-float); }
+.cartbar .info { flex: 0 1 auto; background: var(--capsule); color: var(--on-capsule); border-radius: 999px; padding: 8px 20px; }
+.cartbar .info small { color: color-mix(in srgb, var(--on-capsule) 65%, transparent); opacity: 1; }
+.cartbar .go { flex: 1; justify-content: flex-end; background: transparent; color: var(--on-accent); padding: 12px 16px; }
+.next { box-shadow: var(--shadow-soft); }
+.next .clock { background: var(--capsule); color: var(--accent); padding: 10px 16px; font-size: 15px; }
+.next.calm .clock { background: var(--sunken); color: var(--ink); }
+.topbar .brand, .side-brand .brand { background: var(--capsule); color: var(--accent); }
+.order-card.urgent .pill.lamp, .kpi.lamp b { color: inherit; }
+.order-card.urgent .pill.lamp { background: var(--capsule); color: var(--on-capsule); }
+
+/* Selected and "yours": yellow; weight and action: black */
+.chip.on { background: var(--ink); color: var(--card); }
+.reorder-card:first-child { box-shadow: var(--shadow-soft); }
+.meter-mark { background: var(--ink); }
+.meter-fill { background: var(--ink); }
+.stepper button:active { background: var(--accent); color: var(--on-accent); }
+
+/* Labels: small, bold, a little spaced — the "FRIDAY, OCT 17" of the reference */
+.section-title, .eyebrow, .client-head .eyebrow, .import-tag { text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; font-weight: 800; }
+
+/* Softer press: everything round gives a little */
+.chip, .pick, .order-card, .reorder-card, .product { transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-mid); }
+.chip:active, .pick:active, .reorder-card:active { transform: scale(0.97); }
+@media (hover: hover) {
+  .product:hover, .order-card:hover, .reorder-card:hover { box-shadow: var(--glass-edge), var(--shadow-float); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip, .pick, .order-card, .reorder-card, .product { transition: none; }
+}
 
 /* --- printable documents (A4) ---------------------------------------------------------------------------
    Always black on white regardless of the app theme: these go to paper and PDF. */
