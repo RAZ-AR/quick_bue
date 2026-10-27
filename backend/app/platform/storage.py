@@ -27,6 +27,14 @@ def save(data: bytes, folder: str, content_type: str) -> str:
     return key
 
 
+def save_as(key: str, data: bytes) -> str:
+    """Store bytes under a key the caller built (still random names, no user input)."""
+    path = root() / key
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return key
+
+
 def path_of(key: str) -> Path:
     path = (root() / key).resolve()
     if root() not in path.parents:  # never serve anything outside the media root

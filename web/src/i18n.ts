@@ -471,6 +471,52 @@ export const TEXTS = {
     en: 'A volume price is above the new price — fix the tiers',
   },
 
+  // product card
+  description: { hy: 'Նկարագրություն', ru: 'Описание', en: 'Description' },
+  specs_title: { hy: 'Բնութագրեր', ru: 'Характеристики', en: 'Characteristics' },
+  specs_pick_category: {
+    hy: 'Ընտրեք կատեգորիան՝ կհայտնվեն դրա բնութագրերը',
+    ru: 'Выберите категорию — появятся её характеристики',
+    en: 'Pick a category to see its characteristics',
+  },
+  photos_title: { hy: 'Լուսանկարներ', ru: 'Фото', en: 'Photos' },
+  photos_hint: {
+    hy: 'Մինչև 6 լուսանկար, առաջինը՝ գլխավորը։ ★՝ դարձնել գլխավոր, 👁՝ ցույց տալ գնորդներին կամ թաքցնել։ Կսեղմենք ինքներս։',
+    ru: 'До 6 фото, первое — главное. ★ — сделать главным, 👁 — показывать покупателям или скрыть. Сожмём сами.',
+    en: 'Up to 6 photos, the first is the main one. ★ makes a photo main, 👁 shows it to buyers or hides it. We compress them.',
+  },
+  photo_main: { hy: 'Գլխավոր', ru: 'Главное', en: 'Main' },
+  photo_make_main: { hy: 'Դարձնել գլխավոր', ru: 'Сделать главным', en: 'Make main' },
+  photo_hidden: { hy: 'Թաքցված', ru: 'Скрыто', en: 'Hidden' },
+  photo_hide: { hy: 'Թաքցնել գնորդներից', ru: 'Скрыть от покупателей', en: 'Hide from buyers' },
+  photo_show: { hy: 'Ցույց տալ գնորդներին', ru: 'Показывать покупателям', en: 'Show to buyers' },
+  docs_title: { hy: 'Սերտիֆիկատներ և հայտարարագրեր', ru: 'Сертификаты и декларации', en: 'Certificates and declarations' },
+  doc_kind: { hy: 'Փաստաթուղթ', ru: 'Документ', en: 'Document' },
+  doc_number: { hy: 'Համար', ru: 'Номер', en: 'Number' },
+  doc_valid_until: { hy: 'Գործում է մինչև', ru: 'Действует до', en: 'Valid until' },
+  doc_upload: { hy: 'Վերբեռնել ֆայլ (PDF կամ լուսանկար)', ru: 'Загрузить файл (PDF или фото)', en: 'Upload a file (PDF or photo)' },
+  doc_expired: { hy: 'ժամկետանց', ru: 'истёк', en: 'expired' },
+  doc_open: { hy: 'Բացել', ru: 'Открыть', en: 'Open' },
+  doc_sign_in: { hy: 'Մուտք գործեք՝ դիտելու համար', ru: 'Войдите, чтобы открыть', en: 'Sign in to open' },
+  has_certificate: { hy: 'Սերտիֆիկատ', ru: 'Сертификат', en: 'Certificate' },
+  save_first_for_photos: {
+    hy: 'Պահպանեք ապրանքը՝ հետո կավելացնեք լուսանկարներ և սերտիֆիկատներ',
+    ru: 'Сохраните товар — потом добавите фото и сертификаты',
+    en: 'Save the product, then add photos and certificates',
+  },
+  yes: { hy: 'Այո', ru: 'Да', en: 'Yes' },
+  order_terms: { hy: 'Պատվեր', ru: 'Заказ', en: 'Order' },
+  min_batch: { hy: 'Նվազագույն խմբաքանակ', ru: 'Минимальная партия', en: 'Minimum batch' },
+  qty_step_short: { hy: 'Քայլ', ru: 'Кратность', en: 'Step' },
+  availability: { hy: 'Առկայություն', ru: 'Наличие', en: 'Availability' },
+  seller_min_order: { hy: 'Վաճառողի նվազագույն պատվեր', ru: 'Минимальный заказ у продавца', en: "Seller's minimum order" },
+  lead_time: { hy: 'Առաքում', ru: 'Доставка', en: 'Delivery' },
+  lead_days_n: { hy: 'օր հետո', ru: 'дн. после заказа', en: 'days after order' },
+  volume_prices_short: { hy: 'Մեծածախ գներ', ru: 'Оптовые цены', en: 'Volume prices' },
+  vat_in_price: { hy: 'ԱԱՀ-ն ներառված է', ru: 'НДС включён', en: 'VAT included' },
+  no_vat: { hy: 'Առանց ԱԱՀ', ru: 'Без НДС', en: 'No VAT' },
+  product_not_found: { hy: 'Ապրանքը չի գտնվել', ru: 'Товар не найден', en: 'Product not found' },
+
   // haggling hints
   client_title: { hy: 'Հաճախորդ', ru: 'Клиент', en: 'Client' },
   client_new: { hy: 'Առաջին պատվերն է ձեզ մոտ', ru: 'Первый заказ у вас', en: 'First order with you' },
@@ -693,6 +739,10 @@ export const STATUSES: Record<string, T3> = {
 
 // Problem codes from the API (cart, checkout, negotiation)
 export const PROBLEMS: Record<string, T3> = {
+  too_many_images: { hy: 'Մինչև 6 լուսանկար', ru: 'Не больше 6 фото', en: 'Up to 6 photos' },
+  bad_image: { hy: 'Պատկերը չի կարդացվում', ru: 'Не удалось прочитать картинку', en: 'Cannot read the image' },
+  bad_choice: { hy: 'Ընտրեք ցանկից', ru: 'Выберите из списка', en: 'Pick from the list' },
+  bad_number: { hy: 'Պետք է թիվ լինի', ru: 'Нужно число', en: 'A number is needed' },
   bad_phone: { hy: 'Հեռախոսահամարը սխալ է. օրինակ՝ +374 91 234 567', ru: 'Неверный телефон, пример: +374 91 234 567', en: 'Invalid phone, e.g. +374 91 234 567' },
   bad_bank_account: { hy: 'Հաշվեհամարը պետք է լինի 16 թվանշան', ru: 'Номер счёта — 16 цифр', en: 'The account number has 16 digits' },
   bad_price: { hy: 'Գինը թիվ չէ', ru: 'Цена — не число', en: 'Price is not a number' },

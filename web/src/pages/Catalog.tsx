@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { QtyStepper } from '../components/QtyStepper'
 import { Tile } from '../components/ui'
 import { useLang, useT } from '../i18n'
-import { api, type Category, type OrderListItem, type Product, type ProductPage } from '../lib/api'
+import { api, mediaUrl, type Category, type OrderListItem, type Product, type ProductPage } from '../lib/api'
 import { useCart } from '../lib/cart'
 import { useSession } from '../lib/session'
 import { amd, date, qty, tr, unit } from '../lib/format'
@@ -147,11 +147,22 @@ function ProductCard({ p, slug, canBuy }: { p: Product; slug?: string; canBuy: b
   const best = p.tiers.at(-1)
   const tierPct = best ? Math.round((1 - best.price_amd / p.base_price_amd) * 100) : 0
   const name = tr(p.name, lang)
+  const navigate = useNavigate()
+  // The whole card opens the product; its own links and buttons (cart, quantity) keep working as they are
+  const open = (e: React.MouseEvent) => {
+    if (!(e.target as HTMLElement).closest('a, button, input, label, select')) navigate(`/product/${p.id}`)
+  }
   return (
-    <li className={p.in_stock ? 'product' : 'product out'}>
-      <Tile slug={slug} name={name} />
+    <li className={p.in_stock ? 'product clickable' : 'product out clickable'} onClick={open}>
+      <Link to={`/product/${p.id}`} className="product-thumb" aria-label={name}>
+        {p.images[0] ? <img src={mediaUrl(p.images[0].thumb)} alt="" loading="lazy" /> : <Tile slug={slug} name={name} />}
+      </Link>
       <div>
-        <h3>{name}</h3>
+        <h3>
+          <Link to={`/product/${p.id}`} className="product-link">
+            {name}
+          </Link>
+        </h3>
         <p className="seller">{p.seller ? p.seller.display_name : <span className="muted">🔒 {t('seller_hidden')}</span>}</p>
         <div className="price-row">
           <span className="price num">
@@ -166,6 +177,7 @@ function ProductCard({ p, slug, canBuy }: { p: Product; slug?: string; canBuy: b
         </div>
         <div className="meta">
           {p.allow_offers && <span className="pill haggle">⇄ {t('haggle')}</span>}
+          {p.has_documents && <span className="pill plain">📄 {t('has_certificate')}</span>}
           {p.pack_size && <span className="pill plain">{p.pack_size}</span>}
           {Number(p.min_qty) > 1 && (
             <span className="pill plain">
@@ -180,7 +192,7 @@ function ProductCard({ p, slug, canBuy }: { p: Product; slug?: string; canBuy: b
   )
 }
 
-function BuyControl({ p }: { p: Product }) {
+export function BuyControl({ p }: { p: Product }) {
   const t = useT()
   const lang = useLang()
   const { qtyOf, setItem, remove } = useCart()

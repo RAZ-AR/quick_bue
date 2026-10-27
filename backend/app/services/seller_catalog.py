@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.search import build_search_text
+from app.domain import product_specs
 from app.domain.negotiation import MAX_DISCOUNT_BP, discount_bp
 from app.models import (
     Category,
@@ -64,6 +65,7 @@ class ProductIn:
     in_stock: bool = True
     allow_offers: bool = False
     is_service: bool = False
+    specs: dict = field(default_factory=dict)  # characteristics, domain/product_specs.py
     tiers: list[TierIn] = field(default_factory=list)
     autopilot: AutopilotIn | None = None
 
@@ -116,6 +118,7 @@ async def _apply(session: AsyncSession, actor: Actor, product: Product, data: Pr
     if data.is_service:  # no haggling over a service
         data.allow_offers = False
     product.is_service = data.is_service
+    product.specs = data.specs
     product.allow_offers = data.allow_offers
     product.search_text = build_search_text(data.name)
     await session.flush()
@@ -166,11 +169,20 @@ async def _category_exists(session: AsyncSession, category_id: uuid.UUID | None)
     return category_id is None or await session.get(Category, category_id) is not None
 
 
+async def _check_specs(session: AsyncSession, data: ProductIn) -> list[dict]:
+    """The category must exist; characteristics are kept only if they fit it (and cleaned)."""
+    category = await session.get(Category, data.category_id) if data.category_id else None
+    if data.category_id and category is None:
+        return [{"field": "category_id", "code": "unknown_category"}]
+    data.specs, problems = product_specs.clean(
+        data.specs, category.slug if category else None, data.is_service
+    )
+    return problems
+
+
 async def create(session: AsyncSession, actor: Actor, data: ProductIn) -> Product:
     actor = _seller(actor)
-    problems = _validate(data)
-    if not await _category_exists(session, data.category_id):
-        problems.append({"field": "category_id", "code": "unknown_category"})
+    problems = _validate(data) + await _check_specs(session, data)
     if problems:
         raise ValidationFailed(problems)
     product = Product(
@@ -191,9 +203,7 @@ async def _own(session: AsyncSession, actor: Actor, product_id: uuid.UUID) -> Pr
 async def update(session: AsyncSession, actor: Actor, product_id: uuid.UUID, data: ProductIn) -> Product:
     actor = _seller(actor)
     product = await _own(session, actor, product_id)
-    problems = _validate(data)
-    if not await _category_exists(session, data.category_id):
-        problems.append({"field": "category_id", "code": "unknown_category"})
+    problems = _validate(data) + await _check_specs(session, data)
     if problems:
         raise ValidationFailed(problems)
     await _apply(session, actor, product, data)
@@ -213,7 +223,11 @@ async def list_own(
     session: AsyncSession, actor: Actor, archived: bool = False
 ) -> list[tuple[Product, OfferRule | None]]:
     actor = _seller(actor)
-    stmt = select(Product).where(Product.seller_id == actor.org.id).options(selectinload(Product.tiers))
+    stmt = (
+        select(Product)
+        .where(Product.seller_id == actor.org.id)
+        .options(selectinload(Product.tiers), selectinload(Product.documents))
+    )
     stmt = stmt.where(Product.archived_at.is_not(None) if archived else Product.archived_at.is_(None))
     products = list(await session.scalars(stmt.order_by(Product.created_at.desc())))
     rules = {

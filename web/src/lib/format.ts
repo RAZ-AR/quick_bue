@@ -29,6 +29,16 @@ export function unit(u: Unit, lang: Lang): string {
 
 const LOCALES: Record<Lang, string> = { hy: 'hy-AM', ru: 'ru-RU', en: 'en-GB' }
 
+// Some browsers ship without Armenian locale data and fall back to English, so these are spelled out.
+const HY_MONTHS = ['հունվարի', 'փետրվարի', 'մարտի', 'ապրիլի', 'մայիսի', 'հունիսի', 'հուլիսի', 'օգոստոսի', 'սեպտեմբերի', 'հոկտեմբերի', 'նոյեմբերի', 'դեկտեմբերի']
+
+/** '2027-06-30' → '30 июня 2027 г.': for validity dates, where the year matters */
+export function fullDate(iso: string, lang: Lang): string {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  if (lang === 'hy') return `${d} ${HY_MONTHS[m - 1]} ${y} թ.`
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(LOCALES[lang], { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
 /** "2026-10-23" -> "Fri, 23 Oct" in the user's language (Yerevan calendar day as sent by the API). */
 export function date(iso: string, lang: Lang): string {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number)

@@ -84,6 +84,20 @@ class SellerBrief(BaseModel):
     display_name: str
 
 
+class ImageOut(BaseModel):
+    url: str  # large WebP, relative to the API root
+    thumb: str  # small WebP for lists
+    shown: bool = True  # False: the seller keeps it but buyers do not see it
+
+
+class ProductDocOut(BaseModel):
+    id: uuid.UUID
+    kind: str
+    number: str | None
+    valid_until: date | None
+    name: str | None = None  # original file name (seller only)
+
+
 class ProductOut(ORM):
     id: uuid.UUID
     seller: SellerBrief | None  # hidden from guests
@@ -97,8 +111,22 @@ class ProductOut(ORM):
     qty_step: Decimal
     in_stock: bool
     allow_offers: bool
-    images: list[str]
+    images: list[ImageOut]
     tiers: list[TierOut]
+    has_documents: bool = False  # a certificate or declaration is attached
+
+
+class ProductDetailOut(ProductOut):
+    """The product card: everything about the goods."""
+
+    description: dict[str, str] | None
+    category: str | None  # slug
+    specs: dict
+    documents: list[ProductDocOut]
+    is_service: bool
+    vat_rate_bp: int
+    seller_min_order_amd: int | None = None  # hidden from guests with the seller
+    seller_lead_days: int | None = None
 
 
 class ProductPage(BaseModel):

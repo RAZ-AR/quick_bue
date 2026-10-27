@@ -66,11 +66,13 @@ npm test && npm run lint && npx tsc -b
 backend/app/
 ├── models/        # SQLAlchemy: identity, catalog, orders, negotiation, platform (outbox, idempotency)
 ├── domain/        # чистые функции: pricing, orders (статусы, суммы, дата доставки), negotiation (правила,
-│                  # автопилот), commission — без базы и HTTP; из app.models берут только enum
+│                  # автопилот), commission, product_specs (характеристики по категориям) — без базы и HTTP;
+│                  # из app.models берут только enum
 ├── services/      # работа с базой: cart, checkout, orders, negotiation, agreements, prices, documents,
 │                  # onboarding (регистрация по ИНН, роли), verification (файлы и модерация),
 │                  # seller_catalog (свои товары и условия доставки), price_import (прайс из Excel/CSV),
-│                  # addresses (адреса доставки), suggestions (кросс-сейл в корзине) — без commit
+│                  # addresses (адреса доставки), suggestions (кросс-сейл в корзине),
+│                  # product_media (фото и сертификаты товара) — без commit
 ├── integrations/  # порты внешних систем: registry (demo | eregister — открытый поиск e-register.moj.am | none),
 │                  # geocoder (адрес → дом и район через Nominatim),
 │                  # mailer (console | resend) для кодов входа
@@ -143,6 +145,14 @@ backend/app/
   бесплатной доставки у того же продавца, следующий оптовый порог, услуги продавца, «вы обычно берёте» (90 дней),
   сопутствующие категории у других продавцов, возящих в район адреса. Товар — один раз, под самой полезной причиной.
   **Услуги** — товар с `is_service`: в каталоге не показываются, без торга, предлагаются в корзине.
+- **Карточка товара** (`/product/:id`, `GET /products/{id}`): фото, цены и пороги, условия заказа, описание,
+  характеристики, сертификаты. Характеристики — `products.specs` (JSON), набор зависит от категории и задаётся только
+  в `domain/product_specs.py` (маркировка ТР ТС 022/2011, термическое состояние мяса по ТР ТС 034/2013); формы и
+  карточка строятся из `GET /product-specs`, лишнее для категории отбрасывается при сохранении, у услуг характеристик
+  нет. **Фото** (до 6, первое — главное) пересжимаются Pillow в WebP 1600 px + превью 480 px `-s.webp` без EXIF и
+  отдаются публично `/media/products/...` с годовым кэшем; фото из `hidden_images` продавец видит, покупатели — нет
+  (главное фото всегда показано). **Сертификаты** (`product_documents`: вид, номер, срок) —
+  файлы закрыты, открываются только после входа; гость видит, что документ есть, но не файл и не продавца.
 - Поиск: `products.search_text` собирается `core/search.build_search_text` из всех языков + транслитерации;
   обновляйте его при каждом изменении названия.
 

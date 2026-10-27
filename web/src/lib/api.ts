@@ -25,9 +25,26 @@ export interface Category { id: string; parent_id: string | null; slug: string; 
 export interface Product {
   id: string; seller: Brief | null; category_id: string | null
   name: I18nText; unit: Unit; pack_size: string | null; base_price_amd: number; vat_included: boolean
-  min_qty: string; qty_step: string; in_stock: boolean; allow_offers: boolean; images: string[]
+  min_qty: string; qty_step: string; in_stock: boolean; allow_offers: boolean; images: ProductImage[]
   tiers: { min_qty: string; price_amd: number }[]
+  has_documents: boolean
 }
+/** A product photo: large for the card, small for lists (paths relative to the API root; see mediaUrl) */
+/** `shown` is false for a photo the seller keeps but hides from buyers (sent to the seller only). */
+export interface ProductImage { url: string; thumb: string; shown?: boolean }
+export interface ProductDoc { id: string; kind: string; number: string | null; valid_until: string | null; name?: string | null }
+export type SpecValue = string | number | boolean
+/** The product card (GET /products/{id}) */
+export interface ProductDetail extends Product {
+  description: I18nText | null; category: string | null; specs: Record<string, SpecValue>; documents: ProductDoc[]
+  is_service: boolean; vat_rate_bp: number; seller_min_order_amd: number | null; seller_lead_days: number | null
+}
+/** Characteristics by category (GET /product-specs) */
+export interface SpecDef {
+  code: string; kind: 'text' | 'number' | 'choice' | 'flag'; label: I18nText; group: string
+  unit: I18nText | null; options: Record<string, I18nText>; categories: string[]
+}
+export interface SpecDefs { groups: Record<string, I18nText>; specs: SpecDef[]; doc_kinds: Record<string, I18nText> }
 export interface ProductPage { items: Product[]; total: number; guest?: boolean }
 export interface DemoUser {
   id: string; name: string; email: string; company: string | null; roles: Mode[]; role: string | null
@@ -173,8 +190,9 @@ export interface SellerProduct {
   unit: Unit; pack_size: string | null; base_price_amd: number; vat_included: boolean; vat_rate_bp: number
   min_qty: string; qty_step: string; in_stock: boolean; allow_offers: boolean; is_service: boolean; archived: boolean
   tiers: Tier[]; autopilot: Autopilot | null
+  specs: Record<string, SpecValue>; images: ProductImage[]; documents: ProductDoc[]
 }
-export type ProductInput = Omit<SellerProduct, 'id' | 'archived' | 'vat_rate_bp'>
+export type ProductInput = Omit<SellerProduct, 'id' | 'archived' | 'vat_rate_bp' | 'images' | 'documents'>
 
 // Price list import (Excel / CSV)
 export type ImportField =
@@ -202,6 +220,11 @@ export const context: { orgId: string | null; mode: Mode | null } = { orgId: nul
 
 const TOKEN_KEY = 'qb.token'
 const BASE = '/api'
+
+/** Public media (product photos) by the path the API returns */
+export const mediaUrl = (path: string) => BASE + path
+
+let specDefs: Promise<SpecDefs> | null = null
 
 export class ApiError extends Error {
   constructor(
@@ -289,6 +312,29 @@ export const api = {
     post<OrgDetail>('/organizations/me/roles', { role, delivery_address, district }),
 
   // seller cabinet
+  product: (id: string) => request<ProductDetail>(`/products/${id}`),
+  productSpecs: () => (specDefs ??= request<SpecDefs>('/product-specs')),
+  addProductImage: (id: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<SellerProduct>(`/seller/products/${id}/images`, { method: 'POST', body: form })
+  },
+  removeProductImage: (id: string, index: number) =>
+    request<SellerProduct>(`/seller/products/${id}/images/${index}`, { method: 'DELETE' }),
+  mainProductImage: (id: string, index: number) =>
+    request<SellerProduct>(`/seller/products/${id}/images/${index}/main`, { method: 'POST' }),
+  showProductImage: (id: string, index: number, shown: boolean) =>
+    request<SellerProduct>(`/seller/products/${id}/images/${index}/shown`, { method: 'PUT', body: JSON.stringify({ shown }) }),
+  addProductDocument: (id: string, file: File, kind: string, number: string, validUntil: string) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('kind', kind)
+    if (number) form.append('number', number)
+    if (validUntil) form.append('valid_until', validUntil)
+    return request<SellerProduct>(`/seller/products/${id}/documents`, { method: 'POST', body: form })
+  },
+  removeProductDocument: (id: string, docId: string) =>
+    request<SellerProduct>(`/seller/products/${id}/documents/${docId}`, { method: 'DELETE' }),
   sellerProducts: (archived = false) => request<SellerProduct[]>(`/seller/products?archived=${archived}`),
   createProduct: (body: ProductInput) => post<SellerProduct>('/seller/products', body),
   parsePriceList: (file: File) => {

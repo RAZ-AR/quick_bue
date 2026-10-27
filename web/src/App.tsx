@@ -20,6 +20,7 @@ import { Documents } from './pages/Documents'
 import { Notifications } from './pages/Notifications'
 import { PrintBatch, PrintDocument } from './pages/PrintDocument'
 import { PriceImport } from './pages/PriceImport'
+import { ProductCard } from './pages/ProductCard'
 import { SellerProducts } from './pages/SellerProducts'
 import { SellerSettings } from './pages/SellerSettings'
 
@@ -164,6 +165,7 @@ function routesFor(state: State) {
       return (
         <>
           <Route path="/" element={<Catalog canBuy />} />
+          <Route path="/product/:id" element={<ProductCard canBuy />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -173,6 +175,7 @@ function routesFor(state: State) {
       return (
         <>
           <Route path="/" element={<Catalog canBuy />} />
+          <Route path="/product/:id" element={<ProductCard canBuy />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/notifications" element={<Notifications />} />
@@ -190,6 +193,7 @@ function routesFor(state: State) {
       return (
         <>
           <Route path="/" element={<Catalog canBuy />} />
+          <Route path="/product/:id" element={<ProductCard canBuy />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
@@ -205,6 +209,7 @@ function routesFor(state: State) {
       return (
         <>
           <Route path="/" element={<Orders inbox />} />
+          <Route path="/product/:id" element={<ProductCard canBuy={false} />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/seller/products" element={<SellerProducts />} />

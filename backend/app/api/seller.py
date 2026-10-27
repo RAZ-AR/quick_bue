@@ -2,21 +2,22 @@
 
 import uuid
 from dataclasses import asdict
-from datetime import time
+from datetime import date, time
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, Form, UploadFile
 from pydantic import BaseModel
 
 from app.auth.deps import CurrentActor, Session
 from app.core.spreadsheet import UnreadableFile, read_table
 from app.domain import price_import as imp
-from app.models import OfferRule, Product, Unit
+from app.models import OfferRule, Product, ProductDocKind, Unit
 from app.platform.clock import utcnow
 from app.platform.errors import ValidationFailed
-from app.schemas import ORM, TierOut
+from app.schemas import ORM, ImageOut, ProductDocOut, TierOut
 from app.services import price_import as import_svc
+from app.services import product_media as media
 from app.services import seller_catalog as svc
 
 router = APIRouter(prefix="/seller", tags=["seller"])
@@ -52,6 +53,7 @@ class ProductIn(BaseModel):
     in_stock: bool = True
     allow_offers: bool = False
     is_service: bool = False
+    specs: dict = {}
     tiers: list[TierIn] = []
     autopilot: AutopilotIO | None = None
 
@@ -73,6 +75,9 @@ class SellerProductOut(ORM):
     allow_offers: bool
     is_service: bool
     archived: bool
+    specs: dict
+    images: list[ImageOut]
+    documents: list[ProductDocOut]
     tiers: list[TierOut]
     autopilot: AutopilotIO | None
 
@@ -110,6 +115,14 @@ def _out(p: Product, rule: OfferRule | None) -> SellerProductOut:
         allow_offers=p.allow_offers,
         is_service=p.is_service,
         archived=p.archived_at is not None,
+        specs=p.specs or {},
+        images=[ImageOut(**i) for i in media.image_urls(p, public=False)],
+        documents=[
+            ProductDocOut(
+                id=d.id, kind=d.kind, number=d.number, valid_until=d.valid_until, name=d.original_name
+            )
+            for d in p.documents
+        ],
         tiers=[
             TierOut(min_qty=t.min_qty, price_amd=t.price_amd)
             for t in sorted(p.tiers, key=lambda t: t.min_qty)
@@ -129,7 +142,7 @@ def _data(body: ProductIn) -> svc.ProductIn:
 async def _reload(session: Session, actor: CurrentActor, product_id: uuid.UUID) -> SellerProductOut:
     for p, rule in await svc.list_own(session, actor) + await svc.list_own(session, actor, archived=True):
         if p.id == product_id:
-            await session.refresh(p, ["tiers"])
+            await session.refresh(p, ["tiers", "documents"])
             return _out(p, rule)
     raise AssertionError("product vanished")
 
@@ -163,6 +176,74 @@ async def archive_product(product_id: uuid.UUID, session: Session, actor: Curren
 @router.post("/products/{product_id}/restore", response_model=SellerProductOut)
 async def restore_product(product_id: uuid.UUID, session: Session, actor: CurrentActor):
     await svc.set_archived(session, actor, product_id, False, utcnow())
+    await session.commit()
+    return await _reload(session, actor, product_id)
+
+
+# --- photos and documents of a product ----------------------------------------------------------------------
+
+
+@router.post("/products/{product_id}/images", response_model=SellerProductOut)
+async def add_image(product_id: uuid.UUID, file: UploadFile, session: Session, actor: CurrentActor):
+    await media.add_image(session, actor, product_id, await file.read(), file.content_type or "")
+    await session.commit()
+    return await _reload(session, actor, product_id)
+
+
+@router.delete("/products/{product_id}/images/{index}", response_model=SellerProductOut)
+async def remove_image(product_id: uuid.UUID, index: int, session: Session, actor: CurrentActor):
+    await media.remove_image(session, actor, product_id, index)
+    await session.commit()
+    return await _reload(session, actor, product_id)
+
+
+@router.post("/products/{product_id}/images/{index}/main", response_model=SellerProductOut)
+async def main_image(product_id: uuid.UUID, index: int, session: Session, actor: CurrentActor):
+    await media.make_main(session, actor, product_id, index)
+    await session.commit()
+    return await _reload(session, actor, product_id)
+
+
+class ShownIn(BaseModel):
+    shown: bool
+
+
+@router.put("/products/{product_id}/images/{index}/shown", response_model=SellerProductOut)
+async def show_image(product_id: uuid.UUID, index: int, body: ShownIn, session: Session, actor: CurrentActor):
+    await media.show_image(session, actor, product_id, index, body.shown)
+    await session.commit()
+    return await _reload(session, actor, product_id)
+
+
+@router.post("/products/{product_id}/documents", response_model=SellerProductOut)
+async def add_document(
+    product_id: uuid.UUID,
+    file: UploadFile,
+    session: Session,
+    actor: CurrentActor,
+    kind: Annotated[ProductDocKind, Form()],
+    number: Annotated[str | None, Form()] = None,
+    valid_until: Annotated[date | None, Form()] = None,
+):
+    data = await file.read()
+    await media.add_document(
+        session,
+        actor,
+        product_id,
+        kind,
+        data,
+        file.content_type or "",
+        file.filename or "",
+        number,
+        valid_until,
+    )
+    await session.commit()
+    return await _reload(session, actor, product_id)
+
+
+@router.delete("/products/{product_id}/documents/{doc_id}", response_model=SellerProductOut)
+async def remove_document(product_id: uuid.UUID, doc_id: uuid.UUID, session: Session, actor: CurrentActor):
+    await media.remove_document(session, actor, product_id, doc_id)
     await session.commit()
     return await _reload(session, actor, product_id)
 

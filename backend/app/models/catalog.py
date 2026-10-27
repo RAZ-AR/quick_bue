@@ -99,7 +99,12 @@ class Product(UUIDPk, Timestamped, Base):
     allow_offers: Mapped[bool] = mapped_column(Boolean, default=False)
     # A seller's paid extra (delivery to the hour, unloading): not in the catalog, offered in the cart
     is_service: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Storage keys of photos, the first one is the main photo (each has a "-s" thumbnail next to it)
     images: Mapped[list[str]] = mapped_column(ARRAY(String(500)), default=list)
+    # Photos the seller keeps but does not show to buyers (a subset of images)
+    hidden_images: Mapped[list[str]] = mapped_column(ARRAY(String(500)), default=list, server_default="{}")
+    # Characteristics by code (domain/product_specs.py): {"thermal": "chilled", "country": "AM", "fat": 45}
+    specs: Mapped[dict] = mapped_column(I18nText, default=dict, server_default="{}")
     search_text: Mapped[str] = mapped_column(Text, default="")
     # Archived products disappear from the catalog but stay in order history
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -107,6 +112,35 @@ class Product(UUIDPk, Timestamped, Base):
     tiers: Mapped[list["PriceTier"]] = relationship(
         back_populates="product", order_by="PriceTier.min_qty", cascade="all, delete-orphan"
     )
+    documents: Mapped[list["ProductDocument"]] = relationship(
+        back_populates="product", order_by="ProductDocument.created_at", cascade="all, delete-orphan"
+    )
+
+
+class ProductDocKind(StrEnum):
+    declaration = "declaration"
+    certificate = "certificate"
+    veterinary = "veterinary"
+    phytosanitary = "phytosanitary"
+    halal = "halal"
+    quality = "quality"
+    other = "other"
+
+
+class ProductDocument(UUIDPk, Timestamped, Base):
+    """A certificate or declaration for one product. Buyers who signed in can open the file."""
+
+    __tablename__ = "product_documents"
+
+    product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[ProductDocKind] = mapped_column(str_enum(ProductDocKind))
+    number: Mapped[str | None] = mapped_column(String(80))
+    valid_until: Mapped[date | None] = mapped_column(Date)
+    storage_key: Mapped[str] = mapped_column(String(300))
+    content_type: Mapped[str] = mapped_column(String(80))
+    original_name: Mapped[str | None] = mapped_column(String(200))
+
+    product: Mapped[Product] = relationship(back_populates="documents")
 
 
 class PriceTier(UUIDPk, Timestamped, Base):

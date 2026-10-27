@@ -3,12 +3,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AutopilotEditor, DEFAULT_AUTOPILOT } from '../components/AutopilotEditor'
 import { Field, SelectField } from '../components/Field'
+import { DocManager, PhotoManager, SpecFields } from '../components/ProductParts'
 import { Sheet } from '../components/Sheet'
 import { Tile } from '../components/ui'
 import { problemText, useLang, useT } from '../i18n'
 import { api, ApiError, type Category, type ProductInput, type SellerProduct, type Unit } from '../lib/api'
 import { amd, qty, tr, unit } from '../lib/format'
 import { useSession } from '../lib/session'
+import { useSpecDefs } from '../lib/specs'
 
 const UNITS: Unit[] = ['kg', 'l', 'pcs', 'pack']
 
@@ -26,6 +28,7 @@ const EMPTY: ProductInput = {
   in_stock: true,
   allow_offers: false,
   is_service: false,
+  specs: {},
   tiers: [],
   autopilot: null,
 }
@@ -116,8 +119,9 @@ export function SellerProducts() {
         <ProductEditor
           product={editing === 'new' ? null : editing}
           categories={categories}
-          onClose={close}
+          onClose={async () => (close(), await load())}
           onSaved={async () => (setEditing(null), await load())}
+          onCreated={async (p) => (setEditing(p), await load())}
         />
       )}
     </div>
@@ -129,15 +133,21 @@ function ProductEditor({
   categories,
   onClose,
   onSaved,
+  onCreated,
 }: {
   product: SellerProduct | null
   categories: Category[]
   onClose: () => void
   onSaved: () => Promise<void>
+  /** A new product was saved: keep the form open on it, so photos and documents can be added */
+  onCreated: (p: SellerProduct) => Promise<void>
 }) {
   const t = useT()
   const lang = useLang()
   const [f, setF] = useState<ProductInput>(() => (product ? { ...product } : { ...EMPTY, name: {} }))
+  const [current, setCurrent] = useState<SellerProduct | null>(product)
+  const defs = useSpecDefs()
+  const categorySlug = categories.find((c) => c.id === f.category_id)?.slug
   const [busy, setBusy] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const set = (patch: Partial<ProductInput>) => setF((x) => ({ ...x, ...patch }))
@@ -154,9 +164,10 @@ function ProductEditor({
     setBusy(true)
     try {
       const body = { ...f, autopilot: f.allow_offers ? f.autopilot : null }
-      if (product) await api.updateProduct(product.id, body)
-      else await api.createProduct(body)
-      await onSaved()
+      if (product) {
+        await api.updateProduct(product.id, body)
+        await onSaved()
+      } else await onCreated(await api.createProduct(body))
     } catch (err) {
       const ex = err as ApiError
       setErrors(ex.problems?.length ? ex.problems.map((p) => problemText(p.code, lang)) : [problemText(ex.code, lang)])
@@ -200,6 +211,25 @@ function ProductEditor({
           <input type="checkbox" checked={f.in_stock} onChange={(e) => set({ in_stock: e.target.checked })} /> {t('in_stock')}
         </label>
 
+        <label className="field">
+          <span>{t('description')}</span>
+          <textarea
+            rows={3}
+            value={f.description?.[lang] ?? ''}
+            onChange={(e) => set({ description: { ...(f.description ?? {}), [lang]: e.target.value } })}
+          />
+        </label>
+        {defs && (
+          <SpecFields defs={defs} category={categorySlug} isService={f.is_service} value={f.specs ?? {}} onChange={(specs) => set({ specs })} />
+        )}
+        {current ? (
+          <>
+            <PhotoManager product={current} onChange={setCurrent} />
+            {defs && <DocManager product={current} defs={defs} onChange={setCurrent} />}
+          </>
+        ) : (
+          <p className="notice">{t('save_first_for_photos')}</p>
+        )}
         <fieldset className="box">
           <legend>{t('volume_prices')}</legend>
           {f.tiers.map((tier, i) => (

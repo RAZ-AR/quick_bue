@@ -9,6 +9,8 @@ from app.models.catalog import (
     PriceAgreement,
     PriceTier,
     Product,
+    ProductDocKind,
+    ProductDocument,
     RuleScope,
     Unit,
 )
@@ -128,6 +130,8 @@ __all__ = [
     "PriceSource",
     "PriceTier",
     "Product",
+    "ProductDocKind",
+    "ProductDocument",
     "Role",
     "RuleScope",
     "SellerProfile",
