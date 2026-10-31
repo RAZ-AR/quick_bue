@@ -198,6 +198,8 @@ class ClientLink(UUIDPk, Timestamped, Base):
     first_order_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     orders_count: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[LinkStatus] = mapped_column(str_enum(LinkStatus), default=LinkStatus.active)
+    # The seller's link the buyer joined through (seller_invited)
+    invite_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("invites.id", ondelete="SET NULL"))
 
 
 class PriceAgreement(UUIDPk, Timestamped, Base):

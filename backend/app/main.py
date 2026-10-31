@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import addresses, admin, auth, cart, catalog, geo, inbox, onboarding, orders, seller
+from app.api import addresses, admin, auth, cart, catalog, geo, inbox, invites, onboarding, orders, seller
 from app.config import get_settings
 from app.platform import monitoring
 from app.platform.errors import DomainError
@@ -22,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(auth.router)
     app.include_router(inbox.router)
+    app.include_router(invites.router)
     app.include_router(catalog.router)
     app.include_router(cart.router)
     app.include_router(orders.router)

@@ -1,11 +1,12 @@
 import type React from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AddressField } from '../components/AddressField'
 import { ContactField } from '../components/ContactField'
 import { ConsentText } from '../components/Consent'
 import { Field, SelectField } from '../components/Field'
-import { problemText, useLang, useT } from '../i18n'
+import { fill, problemText, useLang, useT } from '../i18n'
 import { api, ApiError, type Lookup, type Mode, type NewOrg, type TaxRegime } from '../lib/api'
+import { pendingInvite } from '../lib/invite'
 import { useSession } from '../lib/session'
 
 const VENUES = ['cafe', 'restaurant', 'bar', 'bakery', 'hotel', 'catering', 'other']
@@ -27,6 +28,12 @@ export function Onboarding() {
   const t = useT()
   const lang = useLang()
   const [step, setStep] = useState<Step>('role')
+  // Came through a supplier's link: say whose client the new company becomes
+  const [supplier, setSupplier] = useState<string | null>(null)
+  useEffect(() => {
+    const code = pendingInvite.get()
+    if (code) api.supplier(code).then((p) => setSupplier(p.display_name), () => pendingInvite.clear())
+  }, [])
   const [form, setForm] = useState<NewOrg>({ roles: ['buyer'], tin: '', legal_name: '', venue_type: 'cafe' })
   const [lookup, setLookup] = useState<Lookup | null>(null)
   const [busy, setBusy] = useState(false)
@@ -72,8 +79,9 @@ export function Onboarding() {
     setError(null)
     setErrors({})
     try {
-      await api.createOrg(form)
-      // The app switches to the company's cabinet; /onboarding there redirects to the documents
+      const invite = form.roles.includes('buyer') ? pendingInvite.get() : null
+      await api.createOrg({ ...form, invite_code: invite })
+      // The app switches to the company's cabinet; /onboarding there leads on (AfterSignUp in App)
       await reload()
     } catch (err) {
       const ex = err as ApiError
@@ -91,6 +99,9 @@ export function Onboarding() {
       <h1 className="tagline" style={{ marginTop: 8 }}>
         {t('onb_title')}
       </h1>
+      {supplier && form.roles.includes('buyer') && (
+        <p className="pill lamp self-start">{fill(t('sup_onb_note'), { name: supplier })}</p>
+      )}
 
       {step === 'role' && (
         <div className="stack">

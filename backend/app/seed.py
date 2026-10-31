@@ -339,12 +339,17 @@ async def seed() -> None:
         )
 
         # Arax came through Lori's invite (0%); Nova found Yerevan Pack in the catalog (platform rate)
-        s.add(
-            Invite(seller_id=lori.id, code="LORI-ARAX", created_by=seller_users[0].id, used_by_org_id=arax.id)
-        )
+        lori_invite = Invite(seller_id=lori.id, code="LORICHEESE", created_by=seller_users[0].id)
+        s.add(lori_invite)
+        await s.flush()
         s.add_all(
             [
-                ClientLink(seller_id=lori.id, buyer_id=arax.id, source=ClientSource.seller_invited),
+                ClientLink(
+                    seller_id=lori.id,
+                    buyer_id=arax.id,
+                    source=ClientSource.seller_invited,
+                    invite_id=lori_invite.id,
+                ),
                 ClientLink(seller_id=pack.id, buyer_id=nova.id, source=ClientSource.platform),
             ]
         )

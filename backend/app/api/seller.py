@@ -95,6 +95,7 @@ class SettingsIO(BaseModel):
     free_delivery_from_amd: int | None = None
     offer_response_hours: int = 24
     zones: list[ZoneIO] = []
+    description: dict[str, str] | None = None
 
 
 def _out(p: Product, rule: OfferRule | None) -> SellerProductOut:
@@ -273,6 +274,7 @@ def _settings_out(profile, zones) -> SettingsIO:
         delivery_fee_amd=profile.delivery_fee_amd,
         free_delivery_from_amd=profile.free_delivery_from_amd,
         offer_response_hours=profile.offer_response_hours,
+        description=profile.description,
         zones=[ZoneIO(district=z.district, weekdays=z.weekdays) for z in zones],
     )
 

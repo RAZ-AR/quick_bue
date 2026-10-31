@@ -226,7 +226,8 @@ class DeliveryZone(UUIDPk, Timestamped, Base):
 
 
 class Invite(UUIDPk, Timestamped, Base):
-    """A seller's link/QR: buyers who join through it become the seller's own clients (0% commission)."""
+    """A seller's standing link/QR (/s/<code>), also the supplier's public page. Buyers who join through it
+    become the seller's own clients (0% commission). Reusable; a new code revokes the old one."""
 
     __tablename__ = "invites"
 
@@ -235,10 +236,7 @@ class Invite(UUIDPk, Timestamped, Base):
     )
     code: Mapped[str] = mapped_column(String(32), unique=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-    used_by_org_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("organizations.id", ondelete="SET NULL")
-    )
-    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Consent(UUIDPk, Base):

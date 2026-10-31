@@ -963,3 +963,40 @@ main { max-width: 1120px; margin: 0 auto; padding: 8px 16px 16px; }
 .check.consent a, .consent-gate a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 .consent-gate h2 { margin: 0; font-size: 26px; font-weight: 400; letter-spacing: -0.02em; }
 .consent-gate .eyebrow { margin: 0; color: var(--muted); }
+
+/* --- supplier page (/s/<code>) and the seller's link ------------------------------------------------------ */
+.supplier-hero h1 { margin: 6px 0 0; font-size: clamp(30px, 6vw, 44px); font-weight: 400; letter-spacing: -0.03em; line-height: 1.05; }
+.supplier-about { margin: 12px 0 0; max-width: 60ch; color: var(--ink-2); white-space: pre-line; }
+.supplier-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 20px; margin: 20px 0 0; }
+.supplier-facts div { min-width: 0; }
+.supplier-facts .wide { grid-column: 1 / -1; }
+.supplier-facts dt { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.supplier-facts dd { margin: 4px 0 0; font-weight: 600; }
+.supplier-facts dd small { display: block; font-weight: 500; color: var(--muted); }
+.supplier-join, .next.calm { flex-wrap: wrap; }
+.supplier-join > div, .supplier .next > div { display: grid; gap: 2px; min-width: 0; flex: 1 1 220px; }
+.supplier-join .clock { border: 0; cursor: pointer; text-decoration: none; font: inherit; font-weight: 700; }
+.supplier-join .clock:disabled { opacity: 0.6; }
+.self-start { align-self: flex-start; }
+
+.invite-card { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; }
+.invite-card .eyebrow { margin: 0; }
+.invite-url { margin: 8px 0 0; font-size: clamp(18px, 3.4vw, 24px); font-weight: 500; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.invite-text { margin: 8px 0 0; color: rgb(0 0 0 / 0.65); max-width: 52ch; }
+.invite-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.invite-card .btn.ghost { box-shadow: inset 0 0 0 1.5px rgb(0 0 0 / 0.25); color: var(--on-accent); text-decoration: none; }
+.invite-card .btn.primary { background: var(--capsule); color: var(--accent); }
+.invite-side { display: grid; justify-items: center; gap: 8px; }
+.invite-qr { display: block; width: 168px; height: 168px; background: #fff; border-radius: 18px; padding: 6px; }
+.invite-count { display: grid; justify-items: center; margin: 0; font-size: 12px; font-weight: 600; }
+.invite-count .big { font-size: 28px; font-weight: 400; line-height: 1; }
+.invite-card .link { color: var(--on-accent); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.clients-list .line { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.clients-list .line-name { display: grid; gap: 2px; min-width: 0; }
+.clients-meta { display: grid; justify-items: end; gap: 4px; flex: none; }
+@media (max-width: 640px) {
+  .invite-card { grid-template-columns: 1fr; }
+  .invite-side { grid-template-columns: auto 1fr; justify-items: start; align-items: center; }
+  .invite-side .link { grid-column: 1 / -1; }
+  .invite-qr { width: 132px; height: 132px; }
+}

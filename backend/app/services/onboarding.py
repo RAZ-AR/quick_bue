@@ -23,8 +23,8 @@ from app.models import (
     VerificationStatus,
 )
 from app.platform.authz import Action, Actor
-from app.platform.errors import Conflict, ValidationFailed
-from app.services import consents
+from app.platform.errors import Conflict, DomainError, ValidationFailed
+from app.services import consents, invites
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ class NewOrganization:
     delivery_address: str | None = None
     district: str | None = None
     accept_terms: bool = False
+    invite_code: str | None = None  # came through a supplier's link: become its client
     extra: dict = field(default_factory=dict)
 
 
@@ -136,6 +137,11 @@ async def create_organization(
     await consents.accept_current(session, user.id, org.id, ip, user_agent)
     if org.is_seller:
         session.add(SellerProfile(organization_id=org.id, cutoff_time=time(16, 0), lead_days=1))
+    if org.is_buyer and data.invite_code:
+        try:
+            await invites.join(session, org, data.invite_code)
+        except DomainError as e:  # a stale link must not block the sign-up
+            log.info("invite %s not applied: %s", data.invite_code, e.code)
     if org.is_buyer and (data.delivery_address or "").strip():  # addresses are usually added later
         session.add(
             Address(

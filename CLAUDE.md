@@ -72,13 +72,14 @@ backend/app/
 │                  # onboarding (регистрация по ИНН, роли), verification (файлы и модерация),
 │                  # seller_catalog (свои товары и условия доставки), price_import (прайс из Excel/CSV),
 │                  # addresses (адреса доставки), suggestions (кросс-сейл в корзине),
-│                  # product_media (фото и сертификаты товара) — без commit
+│                  # product_media (фото и сертификаты товара), invites (ссылка поставщика, клиенты) — без commit
 ├── integrations/  # порты внешних систем: registry (demo | eregister — открытый поиск e-register.moj.am | none),
 │                  # geocoder (адрес → дом и район через Nominatim),
 │                  # mailer (console | resend) для кодов входа
 ├── platform/      # authz (Actor + таблица прав), errors, clock, outbox, idempotency, storage (файлы в MEDIA_DIR),
 │                  # monitoring (/health/ready, пульс планировщика, ошибки на почту)
-├── api/           # auth, catalog (публичный), cart (+ /checkout), orders (+ торг, /agreements), seller; commit здесь
+├── api/           # auth, catalog (публичный), cart (+ /checkout), orders (+ торг, /agreements), seller,
+│                  # invites (/s/<код>, /seller/invite, /seller/clients); commit здесь
 ├── auth/          # JWT, вход по коду на почту / Google / Telegram, current_actor (заголовки X-Org-Id, X-Mode)
 ├── core/          # search (search_text + транслит hy/ru → latin)
 ├── workers/       # outbox-диспетчер (пока только лог), очередь RQ "qb"
@@ -158,6 +159,13 @@ backend/app/
   `consents` (версия, IP, браузер). Версии — `domain/legal.CURRENT_VERSIONS` и `VERSION` в `web/src/pages/Legal.tsx`,
   держать одинаковыми; поднятая версия → `/me.missing_consents` → окно «Условия обновились» у всех (`POST /auth/consent`).
   Текст документов пока черновик в `Legal.tsx`.
+- **Ссылка поставщика** (`services/invites.py`): у продавца одна постоянная ссылка `/s/<код>` (8 знаков без 0/O/1/I/L)
+  и QR (`/s/<код>/qr.svg`, segno). Это и публичная страница поставщика: название, «о поставщике» (`seller_profiles.description`),
+  условия доставки и его каталог (`/products?invite=<код>` показывает продавца даже гостю — он сам поделился ссылкой).
+  Заведение, вступившее по ссылке (кнопка или `invite_code` при регистрации), — `client_links.source = seller_invited`,
+  `invite_id`; уже существующая пара источник не меняет. «Новая ссылка» отзывает старую (`revoked_at`), клиенты остаются.
+  На фронте код хранится в `localStorage` (`lib/invite.ts`) до входа и регистрации; `/login` и `/onboarding` у вошедшего
+  ведут обратно на `/s/<код>` (`AfterSignIn`, `AfterSignUp` в `App.tsx`).
 - **Мониторинг** (`platform/monitoring.py`): необработанные ошибки API и задач планировщика → письмо на `ALERT_EMAIL`
   (одна и та же — раз в 15 мин); планировщик каждую минуту пишет пульс в Redis и пингует `HEALTHCHECK_PING_URL`;
   `/health/ready` = база + Redis + свежий пульс. Копии: `deploy/backup.sh` (проверка архивов, `BACKUP_REMOTE` через

@@ -64,6 +64,23 @@ export function SellerSettings() {
         <Field label={t('response_hours')} inputMode="numeric" value={s.offer_response_hours} onChange={(e) => set({ offer_response_hours: num(e.target.value) })} />
       </section>
       <section className="ticket">
+        <label className="field">
+          <span>
+            {t('about_supplier')}
+            <em className="muted" style={{ fontStyle: 'normal', fontWeight: 500 }}>
+              {' '}
+              · {t('about_hint')} ({lang.toUpperCase()})
+            </em>
+          </span>
+          <textarea
+            rows={3}
+            maxLength={1000}
+            value={s.description?.[lang] ?? ''}
+            onChange={(e) => set({ description: { ...(s.description ?? {}), [lang]: e.target.value } })}
+          />
+        </label>
+      </section>
+      <section className="ticket">
         <header className="ticket-head">
           <h2>{t('zones')}</h2>
           <span className="muted small">{t('zones_hint')}</span>

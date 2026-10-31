@@ -445,6 +445,7 @@ class NewOrgIn(BaseModel):
     delivery_address: str | None = None
     district: str | None = None
     accept_terms: bool = False
+    invite_code: str | None = None
 
 
 class AddRoleIn(BaseModel):

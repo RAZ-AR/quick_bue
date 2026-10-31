@@ -1,6 +1,5 @@
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { problemText, useLang, useT } from '../i18n'
 import { api, ApiError, type PublicConfig } from '../lib/api'
 import { useSession } from '../lib/session'
@@ -42,7 +41,6 @@ function loadScript(src: string): Promise<void> {
 export function Login() {
   const t = useT()
   const lang = useLang()
-  const navigate = useNavigate()
   const { signIn } = useSession()
   const [config, setConfig] = useState<PublicConfig | null>(null)
   const [email, setEmail] = useState('')
@@ -59,8 +57,8 @@ export function Login() {
   }, [])
 
   async function done(accessToken: string) {
+    // Signed in, the app swaps its routes and /login leads on (AfterSignIn in App)
     await signIn(accessToken)
-    navigate('/', { replace: true })
   }
 
   function fail(e: unknown) {

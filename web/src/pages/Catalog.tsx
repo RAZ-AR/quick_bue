@@ -8,7 +8,18 @@ import { useCart } from '../lib/cart'
 import { useSession } from '../lib/session'
 import { amd, date, qty, tr, unit } from '../lib/format'
 
-export function Catalog({ canBuy, firstName }: { canBuy: boolean; firstName?: string }) {
+/** The catalog; with `invite`, one supplier's products behind its link (named even for guests). */
+export function Catalog({
+  canBuy,
+  firstName,
+  invite,
+  categoryIds,
+}: {
+  canBuy: boolean
+  firstName?: string
+  invite?: string
+  categoryIds?: string[] // only these category chips (a supplier's shelves)
+}) {
   const t = useT()
   const lang = useLang()
   const { org, mode } = useSession()
@@ -28,23 +39,25 @@ export function Catalog({ canBuy, firstName }: { canBuy: boolean; firstName?: st
     const id = setTimeout(
       () => {
         api
-          .products({ q: q.trim(), category_id: categoryId, offers_only: offersOnly, limit: 60 })
+          .products({ q: q.trim(), category_id: categoryId, offers_only: offersOnly, limit: 60, invite })
           .then(setPage, (e: Error) => setError(e.message))
       },
       q ? 250 : 0,
     )
     return () => clearTimeout(id)
-  }, [q, categoryId, offersOnly])
+  }, [q, categoryId, offersOnly, invite])
 
   const slugOf = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c.slug])), [categories])
   const browsing = !q && !categoryId && !offersOnly
 
   return (
-    <div className="catalog page">
-      <h1 className="page-title">
-        {canBuy && firstName ? `${t('hello')}, ${firstName}!` : t('tab_catalog')}
-        {canBuy && <small>{t('what_today')}</small>}
-      </h1>
+    <div className={invite ? 'catalog' : 'catalog page'}>
+      {!invite && (
+        <h1 className="page-title">
+          {canBuy && firstName ? `${t('hello')}, ${firstName}!` : t('tab_catalog')}
+          {canBuy && <small>{t('what_today')}</small>}
+        </h1>
+      )}
       <div className="search-wrap">
         <input
           className="search"
@@ -62,7 +75,9 @@ export function Catalog({ canBuy, firstName }: { canBuy: boolean; firstName?: st
             <input type="checkbox" checked={offersOnly} onChange={(e) => setOffersOnly(e.target.checked)} />
             {t('offers_only')}
           </label>
-          {categories.map((c) => (
+          {categories
+            .filter((c) => !categoryIds || categoryIds.includes(c.id))
+            .map((c) => (
             <button key={c.id} className={c.id === categoryId ? 'chip on' : 'chip'} onClick={() => setCategoryId(c.id)}>
               {tr(c.name, lang)}
             </button>
@@ -70,7 +85,7 @@ export function Catalog({ canBuy, firstName }: { canBuy: boolean; firstName?: st
         </div>
       </div>
 
-      {canBuy && browsing && org && mode === 'buyer' && <QuickReorder />}
+      {canBuy && browsing && !invite && org && mode === 'buyer' && <QuickReorder />}
 
       {error && <p className="error">{error}</p>}
       {page && <p className="muted count">{page.total ? `${t('found')}: ${page.total}` : t('nothing')}</p>}

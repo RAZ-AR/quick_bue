@@ -31,6 +31,8 @@ from app.models import (
 from app.platform.authz import Action, Actor
 from app.platform.errors import NotFound, ValidationFailed
 
+LANGS = ("hy", "ru", "en")
+
 
 @dataclass
 class TierIn:
@@ -257,6 +259,7 @@ class SettingsIn:
     free_delivery_from_amd: int | None = None
     offer_response_hours: int = 24
     zones: list[ZoneIn] = field(default_factory=list)
+    description: dict[str, str] | None = None  # "about us" on the supplier page, hy/ru/en
 
 
 async def get_settings_for(session: AsyncSession, actor: Actor) -> tuple[SellerProfile, list[DeliveryZone]]:
@@ -294,6 +297,8 @@ async def save_settings(
     profile.delivery_fee_amd = data.delivery_fee_amd
     profile.free_delivery_from_amd = data.free_delivery_from_amd
     profile.offer_response_hours = data.offer_response_hours
+    about = {k: v.strip()[:1000] for k, v in (data.description or {}).items() if k in LANGS and v.strip()}
+    profile.description = about or None
     await session.execute(delete(DeliveryZone).where(DeliveryZone.seller_id == actor.org.id))
     for z in data.zones:
         session.add(

@@ -178,7 +178,7 @@ export interface NewOrg {
   registration_number?: string | null; legal_address?: string | null; director_name?: string | null
   bank_name?: string | null; bank_account?: string | null; phone?: string | null; email?: string | null
   venue_type?: string | null; delivery_address?: string | null; district?: string | null
-  accept_terms?: boolean
+  accept_terms?: boolean; invite_code?: string | null
 }
 
 export interface LineAnswer { order_line_id: string; decision: Decision; price_amd?: number }
@@ -217,6 +217,19 @@ export interface SellerSettings {
   min_order_amd: number; cutoff_time: string; lead_days: number; delivery_fee_amd: number
   free_delivery_from_amd: number | null; offer_response_hours: number
   zones: { district: string; weekdays: number[] }[]
+  description: I18nText | null
+}
+/** A supplier's public page behind its standing link /s/<code> */
+export interface SupplierPage {
+  code: string; seller_id: string; display_name: string; description: I18nText | null; verified: boolean
+  products: number; category_ids: string[]; min_order_amd: number; delivery_fee_amd: number
+  free_delivery_from_amd: number | null; lead_days: number; cutoff_time: string; districts: string[]
+  client: boolean | null
+}
+export interface SellerInvite { code: string; url: string; invited_clients: number }
+export interface SellerClient {
+  buyer_id: string; display_name: string; source: 'seller_invited' | 'platform'; since: string
+  orders: number; last_order_at: string | null
 }
 
 /** Which company and which side the user acts for: sent with every request. */
@@ -299,7 +312,7 @@ export const api = {
   me: () => request<Me>('/me'),
   acceptConsent: () => post<void>('/auth/consent'),
   categories: () => request<Category[]>('/categories'),
-  products: (params: { q?: string; category_id?: string; offers_only?: boolean; limit?: number; ids?: string[] }) => {
+  products: (params: { q?: string; category_id?: string; offers_only?: boolean; limit?: number; ids?: string[]; invite?: string }) => {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
       if (Array.isArray(v)) v.forEach((x) => qs.append(k, x))
@@ -353,6 +366,13 @@ export const api = {
     request<SellerProduct>(`/seller/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   archiveProduct: (id: string, archived: boolean) =>
     post<SellerProduct>(`/seller/products/${id}/${archived ? 'archive' : 'restore'}`),
+  supplier: (code: string) => request<SupplierPage>(`/s/${encodeURIComponent(code)}`),
+  supplierQr: (code: string) => `${BASE}/s/${encodeURIComponent(code)}/qr.svg`,
+  joinSupplier: (code: string) =>
+    post<{ status: 'joined' | 'already'; seller_id: string; display_name: string }>(`/s/${encodeURIComponent(code)}/join`),
+  sellerInvite: () => request<SellerInvite>('/seller/invite'),
+  rotateInvite: () => post<SellerInvite>('/seller/invite/rotate'),
+  sellerClients: () => request<SellerClient[]>('/seller/clients'),
   sellerSettings: () => request<SellerSettings>('/seller/settings'),
   saveSellerSettings: (body: SellerSettings) =>
     request<SellerSettings>('/seller/settings', { method: 'PUT', body: JSON.stringify(body) }),

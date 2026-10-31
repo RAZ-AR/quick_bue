@@ -12,7 +12,7 @@ import { useSession } from '../lib/session'
 
 /** The company profile: requisites printed on documents, and the verification checklist. */
 export function Company() {
-  const { reload: onChanged } = useSession()
+  const { reload: onChanged, mode } = useSession()
   const t = useT()
   const lang = useLang()
   const [v, setV] = useState<Verification | null>(null)
@@ -41,6 +41,12 @@ export function Company() {
       </h1>
       {/* The phone tab bar has no room for these: reach them from the company page */}
       <nav className="quick-links">
+        {org.is_seller && mode === 'seller' && (
+          <Link to="/seller/clients" className="next">
+            <strong>{t('clients_title')}</strong>
+            <span className="clock">→</span>
+          </Link>
+        )}
         <Link to="/documents" className="next calm">
           <strong>{t('tab_documents')}</strong>
           <span className="clock">→</span>

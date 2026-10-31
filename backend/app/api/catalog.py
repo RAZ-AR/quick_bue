@@ -31,6 +31,7 @@ from app.schemas import (
     ProductPage,
     SellerBrief,
 )
+from app.services import invites
 from app.services.product_media import image_urls
 
 router = APIRouter(tags=["catalog"])
@@ -51,6 +52,7 @@ async def products(
     seller_id: uuid.UUID | None = None,
     ids: Annotated[list[uuid.UUID] | None, Query(max_length=200)] = None,
     offers_only: bool = False,
+    invite: Annotated[str | None, Query(max_length=40)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 30,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ProductPage:
@@ -72,6 +74,13 @@ async def products(
         stmt = stmt.where(Product.category_id == category_id)
     if seller_id and not guest:  # guests cannot browse a seller they cannot see
         stmt = stmt.where(Product.seller_id == seller_id)
+    shared = None  # a supplier's own link: its catalog, with its name, even for guests
+    if invite:
+        found = await invites.resolve(session, invite)
+        if found is None:
+            raise NotFound("invite_not_found")
+        shared = found[1].id
+        stmt = stmt.where(Product.seller_id == shared)
     # Services are offered in the cart, not listed in the catalog (asking by id still finds them)
     stmt = stmt.where(Product.id.in_(ids)) if ids else stmt.where(Product.is_service.is_(False))
     if offers_only:
@@ -91,7 +100,7 @@ async def products(
         .limit(limit)
         .offset(offset)
     )
-    items = [_product_out(p, None if guest else org) for p, org in rows.all()]
+    items = [_product_out(p, None if guest and org.id != shared else org) for p, org in rows.all()]
     return ProductPage(items=items, total=total or 0, guest=guest)
 
 

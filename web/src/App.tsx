@@ -8,6 +8,7 @@ import type { Lang, Mode } from './lib/api'
 import { CartProvider, useCart } from './lib/cart'
 import { amd } from './lib/format'
 import { NoticesProvider, useNotices } from './lib/notices'
+import { pendingInvite } from './lib/invite'
 import { SessionProvider, useSession } from './lib/session'
 import { CartPage } from './pages/Cart'
 import { Catalog } from './pages/Catalog'
@@ -25,6 +26,8 @@ import { PriceImport } from './pages/PriceImport'
 import { ProductCard } from './pages/ProductCard'
 import { SellerProducts } from './pages/SellerProducts'
 import { SellerSettings } from './pages/SellerSettings'
+import { Supplier } from './pages/Supplier'
+import { Clients } from './pages/Clients'
 
 const LANG_KEY = 'qb.lang'
 const LANGS: Lang[] = ['hy', 'ru', 'en']
@@ -157,10 +160,23 @@ function navFor(state: State, cartCount: number): NavItem[] {
         { to: '/orders', label: 'tab_orders', icon: Icon.ticket },
         { to: '/seller/products', label: 'tab_products', icon: Icon.catalog },
         { to: '/seller/settings', label: 'tab_delivery', icon: Icon.truck },
+        { to: '/seller/clients', label: 'tab_clients', icon: Icon.people, desktopOnly: true },
         { to: '/documents', label: 'tab_documents', icon: Icon.doc, desktopOnly: true },
         { to: '/company', label: 'tab_company', icon: Icon.company },
       ]
   }
+}
+
+/** Signed in on /login: back to the supplier link the visitor came through, else home. */
+function AfterSignIn() {
+  const invite = pendingInvite.get()
+  return <Navigate to={invite ? `/s/${invite}` : '/'} replace />
+}
+
+/** Company just registered: back to the supplier it came for (now its client), else the documents to upload. */
+function AfterSignUp() {
+  const invite = pendingInvite.get()
+  return <Navigate to={invite ? `/s/${invite}` : '/company'} replace />
 }
 
 function routesFor(state: State) {
@@ -170,6 +186,7 @@ function routesFor(state: State) {
         <>
           <Route path="/" element={<Catalog canBuy />} />
           <Route path="/product/:id" element={<ProductCard canBuy />} />
+          <Route path="/s/:code" element={<Supplier />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -180,9 +197,11 @@ function routesFor(state: State) {
         <>
           <Route path="/" element={<Catalog canBuy />} />
           <Route path="/product/:id" element={<ProductCard canBuy />} />
+          <Route path="/s/:code" element={<Supplier />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/login" element={<AfterSignIn />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       )
@@ -190,6 +209,7 @@ function routesFor(state: State) {
       return (
         <>
           <Route path="/" element={<Moderation />} />
+          <Route path="/login" element={<AfterSignIn />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       )
@@ -198,6 +218,7 @@ function routesFor(state: State) {
         <>
           <Route path="/" element={<Catalog canBuy />} />
           <Route path="/product/:id" element={<ProductCard canBuy />} />
+          <Route path="/s/:code" element={<Supplier />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
@@ -205,7 +226,8 @@ function routesFor(state: State) {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/company" element={<Company />} />
           {/* Just registered: go on to the documents */}
-          <Route path="/onboarding" element={<Navigate to="/company" replace />} />
+          <Route path="/onboarding" element={<AfterSignUp />} />
+          <Route path="/login" element={<AfterSignIn />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       )
@@ -214,16 +236,19 @@ function routesFor(state: State) {
         <>
           <Route path="/" element={<Orders inbox />} />
           <Route path="/product/:id" element={<ProductCard canBuy={false} />} />
+          <Route path="/s/:code" element={<Supplier />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/seller/products" element={<SellerProducts />} />
           <Route path="/seller/import" element={<PriceImport />} />
           <Route path="/seller/settings" element={<SellerSettings />} />
+          <Route path="/seller/clients" element={<Clients />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/company" element={<Company />} />
           {/* Just registered: go on to the documents */}
-          <Route path="/onboarding" element={<Navigate to="/company" replace />} />
+          <Route path="/onboarding" element={<AfterSignUp />} />
+          <Route path="/login" element={<AfterSignIn />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       )

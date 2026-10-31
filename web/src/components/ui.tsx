@@ -63,6 +63,14 @@ export const Icon = {
       <circle cx="17" cy="17.5" r="1.8" />
     </svg>
   ),
+  // two people: the seller's clients
+  people: () => (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <circle cx="9" cy="8.5" r="3.2" />
+      <path d="M3 19.5c.9-3.2 3.2-5 6-5s5.1 1.8 6 5" />
+      <path d="M15.5 5.6a3 3 0 0 1 0 5.8M17.5 14.8c1.7.6 2.9 2.2 3.5 4.7" />
+    </svg>
+  ),
   inbox: () => (
     <svg viewBox="0 0 24 24" {...stroke}>
       <path d="M4 13l2.5-8h11L20 13v6H4z" />
