@@ -93,11 +93,48 @@ docker compose -f docker-compose.prod.yml logs -f api                    # ло�
 docker compose -f docker-compose.prod.yml ps                             # состояние
 ```
 
-**Резервные копии.** Ежедневно, 14 дней хранения (база + загруженные документы):
-`crontab -e` → `0 3 * * * cd ~/qb && ./deploy/backup.sh`. Раз в неделю скачивайте копии к себе:
-`scp -i <ключ> "ubuntu@<IP>:qb-backups/*" ~/qb-backups/` — копии на той же машине не спасут, если её потеряете.
+**Резервные копии.** Ежедневно, 14 дней хранения на сервере (база + загруженные документы). Скрипт проверяет архивы:
+оборванный дамп не считается копией.
+
+```bash
+crontab -e   # 0 3 * * * cd ~/qb && ./deploy/backup.sh >> ~/qb-backups/backup.log 2>&1
+```
+
+Копии на той же машине не спасут, если её потерять, поэтому нужно второе место. Подойдёт любой из вариантов, лучше оба:
+
+1. **Облако через rclone** (Oracle Object Storage входит в Always Free, 20 ГБ). В консоли: Storage → Buckets → Create
+   `qb-backups`; профиль → Customer secret keys → Generate. На сервере: `sudo apt install rclone`, `rclone config` →
+   тип `s3`, провайдер `Other`, ключи из консоли, endpoint `https://<namespace>.compat.objectstorage.eu-frankfurt-1.oraclecloud.com`,
+   имя `oci`. В `.env`: `BACKUP_REMOTE=oci:qb-backups` (хранится `BACKUP_REMOTE_DAYS`, по умолчанию 60 дней).
+2. **На Mac по расписанию**: `deploy/pull-backups.sh` забирает копии по ssh в `~/qb-backups` и ничего там не удаляет.
+   Раз в день через launchd — `~/Library/LaunchAgents/am.qb.pull-backups.plist`:
+
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0"><dict>
+     <key>Label</key><string>am.qb.pull-backups</string>
+     <key>ProgramArguments</key><array><string>/bin/sh</string><string>/ПУТЬ/К/qb/deploy/pull-backups.sh</string></array>
+     <key>EnvironmentVariables</key><dict><key>QB_HOST</key><string>ubuntu@IP</string></dict>
+     <key>StartCalendarInterval</key><dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
+     <key>StandardOutPath</key><string>/tmp/qb-pull-backups.log</string>
+     <key>StandardErrorPath</key><string>/tmp/qb-pull-backups.log</string>
+   </dict></plist>
+   ```
+
+   `launchctl load ~/Library/LaunchAgents/am.qb.pull-backups.plist`. Если Mac спал в 10:00, задача запустится при пробуждении.
 
 Восстановление базы: `gunzip -c db-<дата>.sql.gz | docker compose -f docker-compose.prod.yml exec -T db psql -U qb qb`.
+
+**Мониторинг.** Три сигнала, все бесплатные:
+
+| Что | Как настроить | Ловит |
+|---|---|---|
+| Ошибки сервера на почту | `ALERT_EMAIL=<ваша почта>` в `.env` (нужен `MAIL_PROVIDER=resend`) | Необработанные ошибки API и задач планировщика; одна и та же — не чаще раза в 15 минут |
+| Сервер жив | [UptimeRobot](https://uptimerobot.com) → HTTP-монитор `https://<адрес>/api/health/ready`, раз в 5 минут | Сайт недоступен; 503, если упали база, Redis или планировщик |
+| Планировщик и копии | [healthchecks.io](https://healthchecks.io): чек «QB scheduler» (период 1 мин, grace 5 мин) → `HEALTHCHECK_PING_URL`; чек «QB backup» (период 1 день, grace 2 ч) → `BACKUP_PING_URL` | Пропала вся машина (ей уже нечем отправить письмо), копия не сделалась |
+
+Проверка: `curl https://<адрес>/api/health/ready` → `{"status":"ok","checks":{"db":true,"redis":true,"scheduler":true}}`.
 
 ## 7. Что проверить перед первыми пользователями
 
@@ -105,8 +142,10 @@ docker compose -f docker-compose.prod.yml ps                             # со�
 - [ ] Вход по коду на почту работает с чужим адресом (не только вашим).
 - [ ] `REGISTRY_PROVIDER=eregister` (или `none`), но не `demo`: иначе вымышленные «компании» попадут в настоящую систему.
 - [ ] Страница «Компания» принимает загрузку файла; файл переживает `docker compose … up -d --build`.
-- [ ] Резервная копия реально создалась и открывается.
-- [ ] Оферта и политика данных (в списке в [05-cabinets-and-auth.md](05-cabinets-and-auth.md)) — до приёма реальных документов.
+- [ ] Резервная копия реально создалась и открывается, и есть копия вне сервера (облако или Mac).
+- [ ] `/api/health/ready` отвечает `ok`; UptimeRobot и healthchecks.io присылают тестовое оповещение.
+- [ ] Окончательный текст оферты и политики данных от юриста вставлен в `web/src/pages/Legal.tsx` (сейчас там
+      черновик); при существенной правке поднята версия там и в `backend/app/domain/legal.py`.
 
 ## 8. Как развёрнуто на самом деле (22.10.2026)
 

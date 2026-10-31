@@ -2,7 +2,8 @@
 
 Photos are re-encoded on the server: a large WebP for the product card and a small one for lists, with EXIF
 (location, camera) dropped. The first photo is the main one; the seller may keep a photo hidden from buyers.
-Documents (certificates, declarations) are kept as uploaded; buyers who signed in can open them, guests only see that they exist.
+Documents (certificates, declarations) are kept as uploaded; buyers who signed in can open them,
+guests only see that they exist.
 """
 
 import io

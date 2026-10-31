@@ -36,6 +36,7 @@ from app.models import (
     VenueType,
     VerificationStatus,
 )
+from app.services import consents
 
 CATEGORIES = [
     ("disposables", {"hy": "Միանգամյա սպասք", "ru": "Одноразовая посуда", "en": "Disposables"}, 1000),
@@ -417,6 +418,10 @@ async def seed() -> None:
             tiers=[(100, 320)],
         )
         product(honey_org, "grocery", _name("Մեղր", "Мёд горный", "Mountain honey"), Unit.kg, 6_800)
+        await s.flush()
+        # Demo people have accepted the offer, so the app does not ask them
+        for user_id in await s.scalars(select(User.id)):
+            await consents.accept_current(s, user_id)
         await s.commit()
         print(
             "demo data created (all @qb.local): admin, lori, manager, pack, farm, arax, chef, nova, baker, "

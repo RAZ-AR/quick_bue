@@ -12,6 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_sessionmaker
+from app.platform import monitoring
 from app.platform.clock import utcnow
 from app.services import agreements, negotiation, notifications, orders
 from app.workers.outbox import dispatch_pending
@@ -32,9 +33,10 @@ async def run_job(name: str, job: Job, now: datetime | None = None) -> int:
         try:
             done = await job(session, now or utcnow())
             await session.commit()
-        except Exception:
+        except Exception as e:
             await session.rollback()
             log.exception("job %s failed", name)
+            await monitoring.report_error(e, f"job {name}")
             return 0
     if done:
         log.info("%s: %d", name, done)
@@ -44,6 +46,7 @@ async def run_job(name: str, job: Job, now: datetime | None = None) -> int:
 async def tick() -> None:
     for name, job in EVERY_MINUTE.items():
         await run_job(name, job)
+    await monitoring.heartbeat()
 
 
 async def outbox_tick() -> None:

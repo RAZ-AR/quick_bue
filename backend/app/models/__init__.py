@@ -17,8 +17,10 @@ from app.models.catalog import (
 from app.models.identity import (
     Address,
     AuthProvider,
+    Consent,
     DeliveryZone,
     Invite,
+    LegalDoc,
     Locale,
     LoginCode,
     Membership,
@@ -76,6 +78,7 @@ from app.models.verification import FileKind, FileStatus, OrgFile
 
 __all__ = [
     "Address",
+    "Consent",
     "AuthProvider",
     "LoginCode",
     "OrderMessage",
@@ -103,6 +106,7 @@ __all__ = [
     "FileStatus",
     "IdempotencyKey",
     "Invite",
+    "LegalDoc",
     "LineDecision",
     "LinkStatus",
     "Locale",

@@ -10,6 +10,7 @@ from app.models import (
     DocumentStatus,
     FileKind,
     FileStatus,
+    LegalDoc,
     LineDecision,
     Locale,
     NegotiationScope,
@@ -65,6 +66,8 @@ class MeOut(ORM):
     locale: Locale
     is_platform_admin: bool
     memberships: list[MembershipOut]
+    # Legal documents whose current version the user still has to accept
+    missing_consents: list[LegalDoc] = []
 
 
 class CategoryOut(ORM):
@@ -441,6 +444,7 @@ class NewOrgIn(BaseModel):
     venue_type: VenueType | None = None
     delivery_address: str | None = None
     district: str | None = None
+    accept_terms: bool = False
 
 
 class AddRoleIn(BaseModel):

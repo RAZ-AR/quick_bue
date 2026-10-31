@@ -20,7 +20,10 @@ export interface Brief { id: string; display_name: string }
 export interface Me {
   id: string; name: string; email: string | null; locale: Lang; is_platform_admin: boolean
   memberships: { role: 'owner' | 'manager' | 'buyer_staff'; organization: Org; buyer_ready: boolean }[]
+  /** Legal documents whose current version is not accepted yet (signed up before a change) */
+  missing_consents: LegalDoc[]
 }
+export type LegalDoc = 'terms' | 'privacy'
 export interface Category { id: string; parent_id: string | null; slug: string; name: I18nText }
 export interface Product {
   id: string; seller: Brief | null; category_id: string | null
@@ -175,6 +178,7 @@ export interface NewOrg {
   registration_number?: string | null; legal_address?: string | null; director_name?: string | null
   bank_name?: string | null; bank_account?: string | null; phone?: string | null; email?: string | null
   venue_type?: string | null; delivery_address?: string | null; district?: string | null
+  accept_terms?: boolean
 }
 
 export interface LineAnswer { order_line_id: string; decision: Decision; price_amd?: number }
@@ -293,6 +297,7 @@ export const api = {
   config: () => request<PublicConfig>('/config'),
   devLogin: (email: string) => post<{ access_token: string }>('/auth/dev-login', { email }),
   me: () => request<Me>('/me'),
+  acceptConsent: () => post<void>('/auth/consent'),
   categories: () => request<Category[]>('/categories'),
   products: (params: { q?: string; category_id?: string; offers_only?: boolean; limit?: number; ids?: string[] }) => {
     const qs = new URLSearchParams()

@@ -2,6 +2,7 @@ import type React from 'react'
 import { useState } from 'react'
 import { AddressField } from '../components/AddressField'
 import { ContactField } from '../components/ContactField'
+import { ConsentText } from '../components/Consent'
 import { Field, SelectField } from '../components/Field'
 import { problemText, useLang, useT } from '../i18n'
 import { api, ApiError, type Lookup, type Mode, type NewOrg, type TaxRegime } from '../lib/api'
@@ -208,8 +209,15 @@ export function Onboarding() {
               />
             </>
           )}
+          <label className="check consent">
+            <input type="checkbox" checked={!!form.accept_terms} onChange={(e) => set({ accept_terms: e.target.checked })} />
+            <span>
+              <ConsentText />
+            </span>
+          </label>
+          {errors.accept_terms && <p className="error">{errors.accept_terms}</p>}
           {error && <p className="error">{error}</p>}
-          <button className="btn primary block" disabled={busy}>
+          <button className="btn primary block" disabled={busy || !form.accept_terms}>
             {t('create_company')} →
           </button>
           <button type="button" className="link" onClick={() => setStep('tin')}>

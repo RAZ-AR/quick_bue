@@ -193,7 +193,13 @@ async def test_signup_when_register_is_down(client, monkeypatch):
     r = await client.post(
         "/organizations",
         headers=me,
-        json={"roles": ["seller"], "tin": UCOM, "legal_name": "UCOM CJSC", "display_name": "UCOM"},
+        json={
+            "accept_terms": True,
+            "roles": ["seller"],
+            "tin": UCOM,
+            "legal_name": "UCOM CJSC",
+            "display_name": "UCOM",
+        },
     )
     assert r.status_code == 201, r.text
 

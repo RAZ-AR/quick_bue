@@ -2,10 +2,11 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
+from app.api.auth import client_ip
 from app.auth.deps import CurrentActor, CurrentUser, Session
 from app.auth.tokens import issue_token
 from app.config import get_settings
@@ -73,8 +74,16 @@ async def registry_lookup(
 
 
 @router.post("/organizations", response_model=OrgDetailOut, status_code=201)
-async def create_organization(body: NewOrgIn, session: Session, user: CurrentUser) -> Organization:
-    org = await onboarding.create_organization(session, user, onboarding.NewOrganization(**body.model_dump()))
+async def create_organization(
+    body: NewOrgIn, session: Session, user: CurrentUser, request: Request
+) -> Organization:
+    org = await onboarding.create_organization(
+        session,
+        user,
+        onboarding.NewOrganization(**body.model_dump()),
+        ip=client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
     await session.commit()
     return org
 

@@ -32,6 +32,12 @@ class Settings(BaseSettings):
 
     web_app_url: str = "http://localhost:8090"
 
+    # Monitoring: unexpected errors are e-mailed here (empty = off), the same one at most once per cooldown
+    alert_email: str = ""
+    alert_cooldown_s: int = 900
+    # Dead-man switch (healthchecks.io etc.): the scheduler GETs it every minute; empty = off
+    healthcheck_ping_url: str = ""
+
     # Company registry used to prefill sign-up by TIN. There is no official public API in Armenia (docs/04):
     # "demo" = built-in fictional companies, "eregister" = public company search of e-register.moj.am
     # (name, status, registration number, address; cached a day), "none" = manual entry only.

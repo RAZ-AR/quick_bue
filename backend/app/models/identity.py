@@ -1,4 +1,4 @@
-"""People and organizations: users, buyer/seller orgs, memberships, addresses, seller terms, invites."""
+"""People and organizations: users, orgs, memberships, addresses, seller terms, invites, consents."""
 
 import uuid
 from datetime import datetime, time
@@ -70,6 +70,11 @@ class VerificationStatus(StrEnum):
     pending = "pending"  # submitted, waiting for an operator
     verified = "verified"
     rejected = "rejected"
+
+
+class LegalDoc(StrEnum):
+    terms = "terms"  # public offer: the agreement between QB and a company
+    privacy = "privacy"  # personal data policy
 
 
 class Role(StrEnum):
@@ -234,3 +239,21 @@ class Invite(UUIDPk, Timestamped, Base):
         ForeignKey("organizations.id", ondelete="SET NULL")
     )
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Consent(UUIDPk, Base):
+    """A user accepted a version of a legal document. Kept forever: it is the proof of acceptance."""
+
+    __tablename__ = "consents"
+    __table_args__ = (UniqueConstraint("user_id", "document", "version"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # The company being registered, when accepted on sign-up
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL")
+    )
+    document: Mapped[LegalDoc] = mapped_column(str_enum(LegalDoc))
+    version: Mapped[str] = mapped_column(String(32))
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(300))

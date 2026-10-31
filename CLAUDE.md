@@ -76,7 +76,8 @@ backend/app/
 ├── integrations/  # порты внешних систем: registry (demo | eregister — открытый поиск e-register.moj.am | none),
 │                  # geocoder (адрес → дом и район через Nominatim),
 │                  # mailer (console | resend) для кодов входа
-├── platform/      # authz (Actor + таблица прав), errors, clock, outbox, idempotency, storage (файлы в MEDIA_DIR)
+├── platform/      # authz (Actor + таблица прав), errors, clock, outbox, idempotency, storage (файлы в MEDIA_DIR),
+│                  # monitoring (/health/ready, пульс планировщика, ошибки на почту)
 ├── api/           # auth, catalog (публичный), cart (+ /checkout), orders (+ торг, /agreements), seller; commit здесь
 ├── auth/          # JWT, вход по коду на почту / Google / Telegram, current_actor (заголовки X-Org-Id, X-Mode)
 ├── core/          # search (search_text + транслит hy/ru → latin)
@@ -153,6 +154,14 @@ backend/app/
   отдаются публично `/media/products/...` с годовым кэшем; фото из `hidden_images` продавец видит, покупатели — нет
   (главное фото всегда показано). **Сертификаты** (`product_documents`: вид, номер, срок) —
   файлы закрыты, открываются только после входа; гость видит, что документ есть, но не файл и не продавца.
+- **Оферта и политика данных:** при регистрации компании обязательна галочка (`accept_terms`), согласие пишется в
+  `consents` (версия, IP, браузер). Версии — `domain/legal.CURRENT_VERSIONS` и `VERSION` в `web/src/pages/Legal.tsx`,
+  держать одинаковыми; поднятая версия → `/me.missing_consents` → окно «Условия обновились» у всех (`POST /auth/consent`).
+  Текст документов пока черновик в `Legal.tsx`.
+- **Мониторинг** (`platform/monitoring.py`): необработанные ошибки API и задач планировщика → письмо на `ALERT_EMAIL`
+  (одна и та же — раз в 15 мин); планировщик каждую минуту пишет пульс в Redis и пингует `HEALTHCHECK_PING_URL`;
+  `/health/ready` = база + Redis + свежий пульс. Копии: `deploy/backup.sh` (проверка архивов, `BACKUP_REMOTE` через
+  rclone, `BACKUP_PING_URL`), `deploy/pull-backups.sh` — забрать на Mac.
 - Поиск: `products.search_text` собирается `core/search.build_search_text` из всех языков + транслитерации;
   обновляйте его при каждом изменении названия.
 

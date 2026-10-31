@@ -64,6 +64,7 @@ async def test_seller_signs_up_gets_verified_and_trades(client):
         "/organizations",
         headers=me,
         json={
+            "accept_terms": True,
             "roles": ["seller"],
             "tin": company["tin"],
             "legal_name": company["legal_name"],
@@ -113,6 +114,7 @@ async def test_files_are_private(client):
         "/organizations",
         headers=me,
         json={
+            "accept_terms": True,
             "roles": ["buyer"],
             "tin": "02598301",
             "legal_name": "Cascade Cafe LLC",
@@ -133,7 +135,14 @@ async def test_buyer_signup_rules(client):
     r = await client.post(
         "/organizations",
         headers=me,
-        json={"roles": ["buyer"], "tin": "02598301", "legal_name": "Cascade", "phone": "123", "email": "a@b"},
+        json={
+            "accept_terms": True,
+            "roles": ["buyer"],
+            "tin": "02598301",
+            "legal_name": "Cascade",
+            "phone": "123",
+            "email": "a@b",
+        },
     )
     assert {(p["field"], p["code"]) for p in r.json()["details"]["problems"]} == {
         ("phone", "bad_phone"),
@@ -143,14 +152,26 @@ async def test_buyer_signup_rules(client):
     r = await client.post(
         "/organizations",
         headers=me,
-        json={"roles": ["buyer"], "tin": "00000011", "legal_name": "X", "delivery_address": "Somewhere"},
+        json={
+            "accept_terms": True,
+            "roles": ["buyer"],
+            "tin": "00000011",
+            "legal_name": "X",
+            "delivery_address": "Somewhere",
+        },
     )
     assert (r.status_code, r.json()["code"]) == (409, "tin_taken")
     # A closed company from the registry
     r = await client.post(
         "/organizations",
         headers=me,
-        json={"roles": ["buyer"], "tin": "02611111", "legal_name": "Old", "delivery_address": "Somewhere"},
+        json={
+            "accept_terms": True,
+            "roles": ["buyer"],
+            "tin": "02611111",
+            "legal_name": "Old",
+            "delivery_address": "Somewhere",
+        },
     )
     assert r.json()["details"]["problems"][0]["code"] == "company_inactive"
     # Buyers start trading at once; typed-by-hand requisites are marked manual
@@ -158,6 +179,7 @@ async def test_buyer_signup_rules(client):
         "/organizations",
         headers=me,
         json={
+            "accept_terms": True,
             "roles": ["buyer"],
             "tin": "02598301",
             "legal_name": "Cascade Cafe (typed)",
@@ -252,3 +274,44 @@ async def test_non_vat_seller_note(client):
         if d["kind"] == "invoice"
     )
     assert (inv["payload"]["vat_note"], inv["payload"]["totals"]["vat_amd"]) == ("not_vat_payer", 0)
+
+
+# --- consent to the offer and the privacy policy -------------------------------------------------------
+
+
+async def test_signup_needs_consent_and_records_it(client, sessionmaker):
+    from sqlalchemy import select
+
+    from app.domain import legal
+    from app.models import Consent
+
+    me = await register(client)
+    body = {"roles": ["buyer"], "tin": "02598301", "legal_name": "Cascade Cafe LLC"}
+    r = await client.post("/organizations", headers=me, json=body)
+    assert ("accept_terms", "required") in {(p["field"], p["code"]) for p in r.json()["details"]["problems"]}
+    assert sorted((await client.get("/me", headers=me)).json()["missing_consents"]) == ["privacy", "terms"]
+
+    r = await client.post(
+        "/organizations", headers={**me, "User-Agent": "test-browser"}, json={**body, "accept_terms": True}
+    )
+    assert r.status_code == 201, r.text
+    assert (await client.get("/me", headers=me)).json()["missing_consents"] == []
+    async with sessionmaker() as session:
+        rows = (await session.scalars(select(Consent).where(Consent.organization_id == r.json()["id"]))).all()
+    assert {(c.document, c.version) for c in rows} == set(legal.CURRENT_VERSIONS.items())
+    assert {c.user_agent for c in rows} == {"test-browser"}
+
+
+async def test_existing_user_accepts_a_new_version(client, monkeypatch):
+    from app.domain import legal
+    from app.models import LegalDoc
+
+    me = await register(client)
+    assert (await client.post("/auth/consent", headers=me)).status_code == 204
+    assert (await client.post("/auth/consent", headers=me)).status_code == 204  # twice is fine
+    assert (await client.get("/me", headers=me)).json()["missing_consents"] == []
+    # A new offer text: everyone is asked again, the old acceptance stays on record
+    monkeypatch.setitem(legal.CURRENT_VERSIONS, LegalDoc.terms, "2027-01-01")
+    assert (await client.get("/me", headers=me)).json()["missing_consents"] == ["terms"]
+    await client.post("/auth/consent", headers=me)
+    assert (await client.get("/me", headers=me)).json()["missing_consents"] == []

@@ -24,6 +24,7 @@ from app.models import (
 )
 from app.platform.authz import Action, Actor
 from app.platform.errors import Conflict, ValidationFailed
+from app.services import consents
 
 log = logging.getLogger(__name__)
 
@@ -68,12 +69,21 @@ class NewOrganization:
     venue_type: VenueType | None = None
     delivery_address: str | None = None
     district: str | None = None
+    accept_terms: bool = False
     extra: dict = field(default_factory=dict)
 
 
-async def create_organization(session: AsyncSession, user: User, data: NewOrganization) -> Organization:
+async def create_organization(
+    session: AsyncSession,
+    user: User,
+    data: NewOrganization,
+    ip: str | None = None,
+    user_agent: str | None = None,
+) -> Organization:
     tin = normalize_tin(data.tin)
     problems = []
+    if not data.accept_terms:
+        problems.append({"field": "accept_terms", "code": "required"})
     if tin is None:
         problems.append({"field": "tin", "code": "bad_tin"})
     if not data.legal_name.strip():
@@ -123,6 +133,7 @@ async def create_organization(session: AsyncSession, user: User, data: NewOrgani
     session.add(org)
     await session.flush()
     session.add(Membership(user_id=user.id, organization_id=org.id, role=Role.owner))
+    await consents.accept_current(session, user.id, org.id, ip, user_agent)
     if org.is_seller:
         session.add(SellerProfile(organization_id=org.id, cutoff_time=time(16, 0), lead_days=1))
     if org.is_buyer and (data.delivery_address or "").strip():  # addresses are usually added later

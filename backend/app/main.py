@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import addresses, admin, auth, cart, catalog, geo, inbox, onboarding, orders, seller
 from app.config import get_settings
+from app.platform import monitoring
 from app.platform.errors import DomainError
 
 
@@ -34,9 +35,23 @@ def create_app() -> FastAPI:
             {"code": exc.code, "message": exc.message, "details": exc.details}, status_code=exc.status_code
         )
 
+    @app.exception_handler(Exception)
+    async def unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+        await monitoring.report_error(exc, f"{request.method} {request.url.path}")
+        return JSONResponse({"code": "internal_error", "message": "unexpected server error"}, status_code=500)
+
     @app.get("/health")
     async def health():
         return {"status": "ok"}
+
+    @app.get("/health/ready")
+    async def ready() -> JSONResponse:
+        # For an external uptime monitor: 503 when the database, Redis or the scheduler is down
+        checks = await monitoring.readiness()
+        ok = all(checks.values())
+        return JSONResponse(
+            {"status": "ok" if ok else "fail", "checks": checks}, status_code=200 if ok else 503
+        )
 
     @app.get("/config")
     async def public_config():

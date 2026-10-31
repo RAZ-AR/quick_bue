@@ -173,6 +173,7 @@ async def test_new_buyer_orders_only_after_uploading_extract(client):
         "/organizations",
         headers=me,
         json={
+            "accept_terms": True,
             "roles": ["buyer"],
             "tin": "02598301",
             "legal_name": "Cascade Cafe LLC",

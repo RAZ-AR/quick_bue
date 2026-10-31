@@ -14,6 +14,7 @@ from app.platform import ratelimit
 from app.platform.clock import utcnow
 from app.platform.errors import ValidationFailed
 from app.schemas import DevLoginIn, MeOut, TokenOut
+from app.services import consents
 
 router = APIRouter(tags=["auth"])
 
@@ -34,7 +35,17 @@ async def me(user: CurrentUser, session: Session) -> MeOut:
     out = MeOut.model_validate(user)
     for m, membership in zip(out.memberships, user.memberships, strict=True):
         m.buyer_ready = await is_buyer_ready(session, membership.organization)
+    out.missing_consents = await consents.missing(session, user.id)
     return out
+
+
+@router.post("/auth/consent", status_code=204)
+async def accept_consent(user: CurrentUser, session: Session, request: Request) -> None:
+    """Accept the current offer and privacy policy (users who signed up before a version changed)."""
+    await consents.accept_current(
+        session, user.id, ip=client_ip(request), user_agent=request.headers.get("user-agent")
+    )
+    await session.commit()
 
 
 # --- real sign-in: e-mail code, Google, Telegram --------------------------------------------------------
@@ -59,7 +70,7 @@ CODES_PER_IP_HOUR = 20
 CODES_PER_SITE_HOUR = 300
 
 
-def _client_ip(request: Request) -> str:
+def client_ip(request: Request) -> str:
     # Caddy and nginx append to X-Forwarded-For; the first entry is the browser
     forwarded = request.headers.get("x-forwarded-for", "")
     return forwarded.split(",")[0].strip() or (request.client.host if request.client else "?")
@@ -68,7 +79,7 @@ def _client_ip(request: Request) -> str:
 @router.post("/auth/email/start")
 async def email_start(body: EmailStartIn, session: Session, request: Request) -> dict:
     if not (
-        await ratelimit.hit(f"login-ip:{_client_ip(request)}", CODES_PER_IP_HOUR, 3600)
+        await ratelimit.hit(f"login-ip:{client_ip(request)}", CODES_PER_IP_HOUR, 3600)
         and await ratelimit.hit("login-site", CODES_PER_SITE_HOUR, 3600)
     ):
         raise service.TooManyRequests("too_many_codes", "try again later")

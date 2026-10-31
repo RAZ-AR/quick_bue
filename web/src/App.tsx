@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { ConsentGate } from './components/Consent'
 import { Icon } from './components/ui'
 import { LangContext, useT, type TextKey } from './i18n'
 import type { Lang, Mode } from './lib/api'
@@ -18,6 +19,7 @@ import { OrderDetail } from './pages/OrderDetail'
 import { Orders } from './pages/Orders'
 import { Documents } from './pages/Documents'
 import { Notifications } from './pages/Notifications'
+import { Legal } from './pages/Legal'
 import { PrintBatch, PrintDocument } from './pages/PrintDocument'
 import { PriceImport } from './pages/PriceImport'
 import { ProductCard } from './pages/ProductCard'
@@ -58,6 +60,7 @@ export function App() {
           {/* A4 printout: no app chrome */}
           <Route path="/print/batch" element={<PrintBatch />} />
           <Route path="/print/:id" element={<PrintDocument />} />
+          <Route path="/legal/:doc" element={<Legal />} />
           <Route path="*" element={<Shell />} />
         </Routes>
       </SessionProvider>
@@ -119,6 +122,7 @@ function Layout({ state }: { state: State }) {
           ))}
       </nav>
       {showCartBar && <CartBar />}
+      <ConsentGate />
     </div>
   )
 }
@@ -337,6 +341,9 @@ function Sidebar({ nav, state }: { nav: NavItem[]; state: State }) {
           <SignOutButton />
         </div>
         {state === 'guest' && <p className="muted small">{t('guest_hint')}</p>}
+        <p className="legal-links small">
+          <Link to="/legal/terms">{t('legal_terms')}</Link> · <Link to="/legal/privacy">{t('legal_privacy')}</Link>
+        </p>
       </div>
     </aside>
   )
